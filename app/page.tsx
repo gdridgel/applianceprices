@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { categoryConfig, allCategories } from '@/lib/categoryConfig'
-import { Star, Zap, Filter, X } from 'lucide-react'
+import { Star, Zap, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 type Appliance = { id: string, [key: string]: any }
 
@@ -12,6 +12,8 @@ export default function Home() {
   const [appliances, setAppliances] = useState<Appliance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Appliance | null>(null)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const config = categoryConfig[selectedCategory]
   const [filters, setFilters] = useState({ types: [] as string[], brands: [] as string[], colors: [] as string[] })
 
@@ -44,6 +46,28 @@ export default function Home() {
 
   const handleCategoryChange = (cat: string) => { setSelectedCategory(cat); setFilters({ types: [], brands: [], colors: [] }) }
   const getDiscount = (item: Appliance) => { if (!item.list_price || item.list_price <= item.price) return null; return Math.round(((item.list_price - item.price) / item.list_price) * 100) }
+
+  const openProductModal = (product: Appliance) => {
+    setSelectedProduct(product)
+    setCurrentImageIndex(0)
+  }
+
+  const closeProductModal = () => {
+    setSelectedProduct(null)
+    setCurrentImageIndex(0)
+  }
+
+  const nextImage = () => {
+    if (selectedProduct?.image_urls?.length) {
+      setCurrentImageIndex(prev => (prev + 1) % selectedProduct.image_urls.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (selectedProduct?.image_urls?.length) {
+      setCurrentImageIndex(prev => (prev - 1 + selectedProduct.image_urls.length) % selectedProduct.image_urls.length)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -105,7 +129,20 @@ export default function Home() {
                     return (
                       <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-900">
                         {config.tableColumns.map(col => {
-                          if (col.key === 'image') return <td key={col.key} className="px-2 py-1">{item.image_url ? <img src={item.image_url} alt={item.title || ''} className="w-8 h-8 object-contain" /> : <div className="w-8 h-8 bg-slate-700 rounded" />}</td>
+                          if (col.key === 'image') return (
+                            <td key={col.key} className="px-2 py-1">
+                              {item.image_url ? (
+                                <img 
+                                  src={item.image_url} 
+                                  alt={item.title || ''} 
+                                  className="w-8 h-8 object-contain cursor-pointer hover:scale-[3] hover:z-50 transition-transform duration-200" 
+                                  onClick={() => openProductModal(item)}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 bg-slate-700 rounded" />
+                              )}
+                            </td>
+                          )
                           if (col.key === 'price') return <td key={col.key} className="text-white px-2 py-1">${item.price?.toLocaleString()}{discount && <span className="ml-1 text-green-500 text-xs">-{discount}%</span>}</td>
                           if (col.key === 'rating') return <td key={col.key} className="px-2 py-1">{item.rating ? <span className="flex items-center gap-0.5"><Star className="w-3 h-3 fill-amber-400 text-amber-400" />{item.rating.toFixed(1)}</span> : '—'}</td>
                           if (col.key === 'link') return <td key={col.key} className="px-2 py-1"><a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline line-clamp-1" title={item.title}>{item.title || `${item.brand} ${item.model || ''}`}</a></td>
@@ -121,6 +158,110 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeProductModal}>
+          <div className="bg-slate-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-bold text-white pr-8">{selectedProduct.title}</h2>
+                <button onClick={closeProductModal} className="text-slate-400 hover:text-white"><X className="w-6 h-6" /></button>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Image Gallery */}
+                <div>
+                  <div className="relative bg-white rounded-lg p-4 mb-4">
+                    <img 
+                      src={selectedProduct.image_urls?.[currentImageIndex] || selectedProduct.image_url} 
+                      alt={selectedProduct.title} 
+                      className="w-full h-64 object-contain"
+                    />
+                    {selectedProduct.image_urls?.length > 1 && (
+                      <>
+                        <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70"><ChevronLeft className="w-5 h-5" /></button>
+                        <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70"><ChevronRight className="w-5 h-5" /></button>
+                      </>
+                    )}
+                  </div>
+                  {selectedProduct.image_urls?.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto">
+                      {selectedProduct.image_urls.map((url: string, index: number) => (
+                        <img 
+                          key={index} 
+                          src={url} 
+                          alt={`${selectedProduct.title} ${index + 1}`} 
+                          className={`w-16 h-16 object-contain bg-white rounded cursor-pointer border-2 ${currentImageIndex === index ? 'border-blue-500' : 'border-transparent'}`}
+                          onClick={() => setCurrentImageIndex(index)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div>
+                  <div className="mb-4">
+                    <div className="text-3xl font-bold text-white mb-1">${selectedProduct.price?.toLocaleString()}</div>
+                    {selectedProduct.list_price && selectedProduct.list_price > selectedProduct.price && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 line-through">${selectedProduct.list_price?.toLocaleString()}</span>
+                        <span className="text-green-500 text-sm">Save {Math.round(((selectedProduct.list_price - selectedProduct.price) / selectedProduct.list_price) * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedProduct.rating && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                        <span className="text-white font-medium">{selectedProduct.rating.toFixed(1)}</span>
+                      </div>
+                      {selectedProduct.review_count && (
+                        <span className="text-slate-400">({selectedProduct.review_count.toLocaleString()} reviews)</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-6">
+                    {selectedProduct.brand && (
+                      <div className="flex"><span className="text-slate-400 w-24">Brand:</span><span className="text-white">{selectedProduct.brand}</span></div>
+                    )}
+                    {selectedProduct.model && (
+                      <div className="flex"><span className="text-slate-400 w-24">Model:</span><span className="text-white">{selectedProduct.model}</span></div>
+                    )}
+                    {selectedProduct.color && (
+                      <div className="flex"><span className="text-slate-400 w-24">Color:</span><span className="text-white">{selectedProduct.color}</span></div>
+                    )}
+                    {selectedProduct.type && (
+                      <div className="flex"><span className="text-slate-400 w-24">Type:</span><span className="text-white">{selectedProduct.type}</span></div>
+                    )}
+                    {selectedProduct.weight_lbs && (
+                      <div className="flex"><span className="text-slate-400 w-24">Weight:</span><span className="text-white">{selectedProduct.weight_lbs} lbs</span></div>
+                    )}
+                    {selectedProduct.capacity_cu_ft && (
+                      <div className="flex"><span className="text-slate-400 w-24">Capacity:</span><span className="text-white">{selectedProduct.capacity_cu_ft} cu.ft.</span></div>
+                    )}
+                    {selectedProduct.btu && (
+                      <div className="flex"><span className="text-slate-400 w-24">BTU:</span><span className="text-white">{selectedProduct.btu.toLocaleString()}</span></div>
+                    )}
+                  </div>
+
+                  <a 
+                    href={selectedProduct.product_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-block w-full text-center bg-amber-500 hover:bg-amber-600 text-black font-bold py-3 px-6 rounded-lg transition"
+                  >
+                    View on Amazon
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
