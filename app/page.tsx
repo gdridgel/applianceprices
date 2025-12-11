@@ -6,6 +6,25 @@ import { categoryConfig, allCategories } from '@/lib/categoryConfig'
 import { Star, Zap, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 
+// Words that indicate a product is a part/accessory, not a full appliance
+const PARTS_FILTER_WORDS = [
+  'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
+  'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
+  'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
+  'switch', 'circuit', 'board', 'gasket', 'motherboard', 'timer', 'seal',
+  'compressor', 'fan motor', 'door handle', 'shelf', 'drawer', 'bin',
+  'ice tray', 'water line', 'defrost', 'relay', 'start device'
+]
+
+const MINIMUM_PRICE = 50.00
+
+// Check if a product title indicates it's a part/accessory
+function isPartOrAccessory(title: string): boolean {
+  if (!title) return false
+  const lowerTitle = title.toLowerCase()
+  return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
+}
+
 type Appliance = {
   id: string
   [key: string]: any
@@ -36,19 +55,26 @@ export default function Home() {
           .select('asin')
         const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
         
-        // Then get appliances
+        // Then get appliances with minimum price filter
         const { data, error } = await supabase
           .from('appliances')
           .select('*')
           .eq('category', selectedCategory)
           .not('price', 'is', null)
+          .gte('price', MINIMUM_PRICE)
           .order('price', { ascending: true })
-          .limit(1000)
+          .limit(2000)
         
         if (error) throw error
         
-        // Filter out deleted ASINs
-        const filtered = (data || []).filter(item => !deletedAsins.has(item.asin))
+        // Filter out deleted ASINs and parts/accessories
+        const filtered = (data || []).filter(item => {
+          // Skip deleted ASINs
+          if (deletedAsins.has(item.asin)) return false
+          // Skip parts/accessories based on title
+          if (isPartOrAccessory(item.title)) return false
+          return true
+        })
         setAppliances(filtered)
       } catch (error) {
         console.error('Error fetching appliances:', error)
