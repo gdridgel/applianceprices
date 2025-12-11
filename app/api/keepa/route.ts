@@ -7,6 +7,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+async function getDeletedAsins(): Promise<Set<string>> {
+  const { data } = await supabase.from('deleted_asins').select('asin')
+  return new Set(data?.map(d => d.asin) || [])
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -18,6 +23,7 @@ export async function POST(request: NextRequest) {
       }
 
       const foundAsins = await discoverAsins(category)
+      const deletedAsins = await getDeletedAsins()
       
       const { data: existing } = await supabase
         .from('appliances')
@@ -25,13 +31,14 @@ export async function POST(request: NextRequest) {
         .eq('category', category)
       
       const existingAsins = new Set(existing?.map(e => e.asin) || [])
-      const newAsins = foundAsins.filter(asin => !existingAsins.has(asin))
+      const newAsins = foundAsins.filter(asin => !existingAsins.has(asin) && !deletedAsins.has(asin))
 
       return NextResponse.json({
         success: true,
         category,
         totalFound: foundAsins.length,
         newAsins: newAsins.length,
+        skippedDeleted: foundAsins.filter(a => deletedAsins.has(a)).length,
         asins: newAsins
       })
     }
@@ -41,7 +48,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Category and ASINs required' }, { status: 400 })
       }
 
-      const products = await getProductsByAsins(asins, category)
+      const deletedAsins = await getDeletedAsins()
+      const filteredAsins = asins.filter((asin: string) => !deletedAsins.has(asin))
+
+      const products = await getProductsByAsins(filteredAsins, category)
       
       let created = 0
       let updated = 0
@@ -129,6 +139,7 @@ export async function POST(request: NextRequest) {
     if (action === 'full-sync') {
       const results: any[] = []
       const categories = Object.keys(CATEGORY_CONFIG)
+      const deletedAsins = await getDeletedAsins()
 
       for (const cat of categories) {
         try {
@@ -140,7 +151,7 @@ export async function POST(request: NextRequest) {
             .eq('category', cat)
           
           const existingAsins = new Set(existing?.map(e => e.asin) || [])
-          const newAsins = foundAsins.filter(asin => !existingAsins.has(asin))
+          const newAsins = foundAsins.filter(asin => !existingAsins.has(asin) && !deletedAsins.has(asin))
           
           let created = 0
           let errors = 0

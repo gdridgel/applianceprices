@@ -49,8 +49,12 @@ export default function AdminPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this product?')) return
+    const item = appliances.find(a => a.id === id)
     const { error } = await supabase.from('appliances').delete().eq('id', id)
     if (!error) {
+      if (item?.asin) {
+        await supabase.from('deleted_asins').insert([{ asin: item.asin, category: selectedCategory, reason: 'Manual delete' }])
+      }
       setAppliances(prev => prev.filter(a => a.id !== id))
       setCounts(prev => ({ ...prev, [selectedCategory]: (prev[selectedCategory] || 1) - 1 }))
     }
@@ -244,15 +248,26 @@ export default function AdminPage() {
           {isLoading ? <div className="p-8 text-center text-slate-500">Loading...</div> : appliances.length === 0 ? <div className="p-8 text-center text-slate-500">No products. Use Keepa to discover products!</div> : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50"><tr><th className="text-left px-4 py-3">Image</th><th className="text-left px-4 py-3">Brand</th><th className="text-left px-4 py-3">Title</th><th className="text-left px-4 py-3">Price</th><th className="text-left px-4 py-3">Rating</th><th className="text-left px-4 py-3">Actions</th></tr></thead>
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="text-left px-4 py-3">Image</th>
+                    <th className="text-left px-4 py-3">Brand</th>
+                    <th className="text-left px-4 py-3">Title</th>
+                    <th className="text-left px-4 py-3">Price</th>
+                    <th className="text-left px-4 py-3">Rating</th>
+                    <th className="text-left px-4 py-3">Link</th>
+                    <th className="text-left px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {appliances.map(item => (
                     <tr key={item.id} className="border-t hover:bg-slate-50">
-                      <td className="px-4 py-3">{item.image_url ? <img src={item.image_url} alt="" className="w-12 h-12 object-contain" /> : <div className="w-12 h-12 bg-slate-200 rounded" />}</td>
+                      <td className="px-4 py-3 relative">{item.image_url ? <img src={item.image_url} alt="" className="w-12 h-12 object-contain hover:scale-[4] hover:z-50 hover:absolute hover:bg-white hover:shadow-lg hover:rounded transition-transform duration-200 cursor-pointer" /> : <div className="w-12 h-12 bg-slate-200 rounded" />}</td>
                       <td className="px-4 py-3">{item.brand || '—'}</td>
                       <td className="px-4 py-3 max-w-xs truncate">{item.title || '—'}</td>
-                      <td className="px-4 py-3">{item.price ? `$${item.price}` : '—'}</td>
+                      <td className="px-4 py-3 font-medium">{item.price ? `$${item.price.toLocaleString()}` : '—'}</td>
                       <td className="px-4 py-3">{item.rating ? `${item.rating}★` : '—'}</td>
+                      <td className="px-4 py-3">{item.product_url ? <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View on Amazon</a> : '—'}</td>
                       <td className="px-4 py-3"><button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button></td>
                     </tr>
                   ))}
@@ -265,3 +280,22 @@ export default function AdminPage() {
     </div>
   )
 }
+```
+
+---
+
+## **To Update:**
+
+1. Open `C:\appliance-prices\migrated-app\app\admin\page.tsx` in Notepad
+2. Select all (Ctrl+A), delete
+3. Paste the code above
+4. Save (Ctrl+S)
+
+---
+
+## **Push to GitHub:**
+```
+cd C:\appliance-prices\migrated-app
+git add .
+git commit -m "Add link and price columns to admin"
+git push
