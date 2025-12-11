@@ -83,18 +83,22 @@ function parseSizeDimensions(size: string | null): { width: number | null, depth
   if (!size) return { width: null, depth: null, height: null }
   
   // Try pattern: "18.7''*17.4''*33.1''(W*D*H)" or similar
-  const match = size.match(/(\d+\.?\d*)[''″"]*\s*[*xX×]\s*(\d+\.?\d*)[''″"]*\s*[*xX×]\s*(\d+\.?\d*)[''″"]*/i)
+  // Match numbers followed by optional quotes/inches symbols, separated by * or x
+  const match = size.match(/(\d+\.?\d*)[\s''″"]*[*xX×][\s]*(\d+\.?\d*)[\s''″"]*[*xX×][\s]*(\d+\.?\d*)/i)
+  
   if (match) {
     const dim1 = parseFloat(match[1])
     const dim2 = parseFloat(match[2])
     const dim3 = parseFloat(match[3])
     
-    // Check if format specifies W*D*H
-    if (size.toLowerCase().includes('w') && size.toLowerCase().includes('d') && size.toLowerCase().includes('h')) {
-      // W*D*H format
+    // Check if format specifies W*D*H or similar
+    const lowerSize = size.toLowerCase()
+    if (lowerSize.includes('w') && lowerSize.includes('d') && lowerSize.includes('h')) {
+      // W*D*H format - width, depth, height in that order
       return { width: dim1, depth: dim2, height: dim3 }
     }
-    // Default assumption: smallest is depth, largest is height
+    
+    // Default assumption for appliances: smallest is depth, largest is height
     const dims = [dim1, dim2, dim3].sort((a, b) => a - b)
     return { width: dims[1], depth: dims[0], height: dims[2] }
   }
