@@ -407,10 +407,35 @@ export async function getProductsByAsins(asins: string[], category: string): Pro
   return products
 }
 
-// Discover ASINs for a category using Product Finder
-export async function discoverAsins(category: string): Promise<string[]> {
-  const result = await queryProducts(category, 0)
-  return result.asins
+// Discover ASINs for a category using Product Finder (fetches multiple pages)
+export async function discoverAsins(category: string, maxPages: number = 5): Promise<string[]> {
+  const allAsins: string[] = []
+  
+  for (let page = 0; page < maxPages; page++) {
+    try {
+      console.log(`Fetching ${category} page ${page + 1} of ${maxPages}...`)
+      const result = await queryProducts(category, page)
+      
+      if (result.asins.length === 0) {
+        console.log(`No more results for ${category} at page ${page}`)
+        break // No more results
+      }
+      
+      allAsins.push(...result.asins)
+      console.log(`Found ${result.asins.length} ASINs on page ${page}, total: ${allAsins.length}`)
+      
+      // Rate limiting delay between pages
+      if (page < maxPages - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    } catch (error) {
+      console.error(`Error fetching page ${page} for ${category}:`, error)
+      break
+    }
+  }
+  
+  // Remove duplicates
+  return [...new Set(allAsins)]
 }
 
 // Legacy search function (for backwards compatibility)
