@@ -72,7 +72,18 @@ export async function POST(request: NextRequest) {
           image_url: product.imageUrl,
           image_urls: product.imageUrls,
           product_url: product.productUrl,
-          weight_lbs: product.weight,
+          height_in: product.heightInches,
+          width_in: product.widthInches,
+          depth_in: product.depthInches,
+          weight_lbs: product.weightLbs,
+          capacity_cu_ft: product.capacityCuFt,
+          fridge_cu_ft: product.fridgeCuFt,
+          freezer_cu_ft: product.freezerCuFt,
+          btu: product.btu,
+          energy_star: product.energyStar,
+          ice_maker: product.iceMaker,
+          water_dispenser: product.waterDispenser,
+          type: product.type,
           updated_at: new Date().toISOString()
         }
 
@@ -132,7 +143,18 @@ export async function POST(request: NextRequest) {
             brand: product.brand,
             model: product.model,
             color: product.color,
-            weight_lbs: product.weight,
+            height_in: product.heightInches,
+            width_in: product.widthInches,
+            depth_in: product.depthInches,
+            weight_lbs: product.weightLbs,
+            capacity_cu_ft: product.capacityCuFt,
+            fridge_cu_ft: product.fridgeCuFt,
+            freezer_cu_ft: product.freezerCuFt,
+            btu: product.btu,
+            energy_star: product.energyStar,
+            ice_maker: product.iceMaker,
+            water_dispenser: product.waterDispenser,
+            type: product.type,
             updated_at: new Date().toISOString()
           })
           .eq('asin', product.asin)
@@ -182,7 +204,18 @@ export async function POST(request: NextRequest) {
                   image_url: product.imageUrl,
                   image_urls: product.imageUrls,
                   product_url: product.productUrl,
-                  weight_lbs: product.weight
+                  height_in: product.heightInches,
+                  width_in: product.widthInches,
+                  depth_in: product.depthInches,
+                  weight_lbs: product.weightLbs,
+                  capacity_cu_ft: product.capacityCuFt,
+                  fridge_cu_ft: product.fridgeCuFt,
+                  freezer_cu_ft: product.freezerCuFt,
+                  btu: product.btu,
+                  energy_star: product.energyStar,
+                  ice_maker: product.iceMaker,
+                  water_dispenser: product.waterDispenser,
+                  type: product.type
                 }])
               if (error) errors++
               else created++
@@ -205,7 +238,18 @@ export async function POST(request: NextRequest) {
                   brand: product.brand,
                   model: product.model,
                   color: product.color,
-                  weight_lbs: product.weight,
+                  height_in: product.heightInches,
+                  width_in: product.widthInches,
+                  depth_in: product.depthInches,
+                  weight_lbs: product.weightLbs,
+                  capacity_cu_ft: product.capacityCuFt,
+                  fridge_cu_ft: product.fridgeCuFt,
+                  freezer_cu_ft: product.freezerCuFt,
+                  btu: product.btu,
+                  energy_star: product.energyStar,
+                  ice_maker: product.iceMaker,
+                  water_dispenser: product.waterDispenser,
+                  type: product.type,
                   updated_at: new Date().toISOString()
                 })
                 .eq('asin', product.asin)
