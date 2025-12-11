@@ -280,22 +280,3 @@ export default function AdminPage() {
     </div>
   )
 }
-```
-
----
-
-## **To Update:**
-
-1. Open `C:\appliance-prices\migrated-app\app\admin\page.tsx` in Notepad
-2. Select all (Ctrl+A), delete
-3. Paste the code above
-4. Save (Ctrl+S)
-
----
-
-## **Push to GitHub:**
-```
-cd C:\appliance-prices\migrated-app
-git add .
-git commit -m "Add link and price columns to admin"
-git push
