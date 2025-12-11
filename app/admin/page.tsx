@@ -3,13 +3,10 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { allCategories } from '@/lib/categoryConfig'
-import { ArrowLeft, Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle, RefreshCw, Search, Zap } from 'lucide-react'
 import Link from 'next/link'
 
-type Appliance = {
-  id: string
-  [key: string]: any
-}
+type Appliance = { id: string, [key: string]: any }
 
 export default function AdminPage() {
   const [selectedCategory, setSelectedCategory] = useState('Refrigerators')
@@ -19,42 +16,31 @@ export default function AdminPage() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{success: boolean, added: number, errors: number} | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newProduct, setNewProduct] = useState({
-    category: 'Refrigerators',
-    brand: '',
-    model: '',
-    title: '',
-    price: '',
-    product_url: '',
-    image_url: '',
-    type: '',
-  })
+  const [newProduct, setNewProduct] = useState({ category: 'Refrigerators', brand: '', model: '', title: '', price: '', product_url: '', image_url: '', type: '' })
   const [adding, setAdding] = useState(false)
+  const [discovering, setDiscovering] = useState(false)
+  const [discoverResult, setDiscoverResult] = useState<any>(null)
+  const [refreshingPrices, setRefreshingPrices] = useState(false)
+  const [refreshResult, setRefreshResult] = useState<any>(null)
+  const [fullSyncing, setFullSyncing] = useState(false)
+  const [fullSyncResult, setFullSyncResult] = useState<any>(null)
+  const [fetchingDetails, setFetchingDetails] = useState(false)
 
-  useEffect(() => {
-    async function fetchCounts() {
-      const newCounts: Record<string, number> = {}
-      for (const cat of allCategories) {
-        const { count } = await supabase
-          .from('appliances')
-          .select('*', { count: 'exact', head: true })
-          .eq('category', cat)
-        newCounts[cat] = count || 0
-      }
-      setCounts(newCounts)
+  useEffect(() => { fetchCounts() }, [])
+
+  async function fetchCounts() {
+    const newCounts: Record<string, number> = {}
+    for (const cat of allCategories) {
+      const { count } = await supabase.from('appliances').select('*', { count: 'exact', head: true }).eq('category', cat)
+      newCounts[cat] = count || 0
     }
-    fetchCounts()
-  }, [])
+    setCounts(newCounts)
+  }
 
   useEffect(() => {
     async function fetchAppliances() {
       setIsLoading(true)
-      const { data, error } = await supabase
-        .from('appliances')
-        .select('*')
-        .eq('category', selectedCategory)
-        .order('created_at', { ascending: false })
-        .limit(100)
+      const { data, error } = await supabase.from('appliances').select('*').eq('category', selectedCategory).order('created_at', { ascending: false }).limit(100)
       if (!error) setAppliances(data || [])
       setIsLoading(false)
     }
@@ -74,19 +60,13 @@ export default function AdminPage() {
     if (!confirm(`Delete ALL ${selectedCategory}?`)) return
     if (!confirm('Are you sure?')) return
     const { error } = await supabase.from('appliances').delete().eq('category', selectedCategory)
-    if (!error) {
-      setAppliances([])
-      setCounts(prev => ({ ...prev, [selectedCategory]: 0 }))
-    }
+    if (!error) { setAppliances([]); setCounts(prev => ({ ...prev, [selectedCategory]: 0 })) }
   }
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     setAdding(true)
-    const { error } = await supabase.from('appliances').insert([{
-      ...newProduct,
-      price: parseFloat(newProduct.price) || null,
-    }])
+    const { error } = await supabase.from('appliances').insert([{ ...newProduct, price: parseFloat(newProduct.price) || null }])
     if (!error) {
       setShowAddForm(false)
       setNewProduct({ category: 'Refrigerators', brand: '', model: '', title: '', price: '', product_url: '', image_url: '', type: '' })
@@ -124,13 +104,60 @@ export default function AdminPage() {
       setImportResult({ success: true, added, errors })
       const { data } = await supabase.from('appliances').select('*').eq('category', selectedCategory).order('created_at', { ascending: false }).limit(100)
       setAppliances(data || [])
-      setCounts(prev => ({ ...prev, [selectedCategory]: (prev[selectedCategory] || 0) + added }))
-    } catch (err) {
-      setImportResult({ success: false, added: 0, errors: 1 })
-    } finally {
-      setImporting(false)
-      e.target.value = ''
-    }
+      fetchCounts()
+    } catch { setImportResult({ success: false, added: 0, errors: 1 }) }
+    finally { setImporting(false); e.target.value = '' }
+  }
+
+  const handleDiscover = async () => {
+    setDiscovering(true)
+    setDiscoverResult(null)
+    try {
+      const response = await fetch('/api/keepa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'discover', category: selectedCategory }) })
+      const data = await response.json()
+      setDiscoverResult(data)
+      if (data.success && data.asins && data.asins.length > 0) {
+        setFetchingDetails(true)
+        const detailsResponse = await fetch('/api/keepa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'fetch-details', category: selectedCategory, asins: data.asins }) })
+        const detailsData = await detailsResponse.json()
+        setDiscoverResult({ ...data, details: detailsData })
+        setFetchingDetails(false)
+        const { data: products } = await supabase.from('appliances').select('*').eq('category', selectedCategory).order('created_at', { ascending: false }).limit(100)
+        setAppliances(products || [])
+        fetchCounts()
+      }
+    } catch { setDiscoverResult({ success: false, error: 'Failed to connect to Keepa' }) }
+    finally { setDiscovering(false); setFetchingDetails(false) }
+  }
+
+  const handleRefreshPrices = async () => {
+    setRefreshingPrices(true)
+    setRefreshResult(null)
+    try {
+      const response = await fetch('/api/keepa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'refresh-prices', category: selectedCategory }) })
+      const data = await response.json()
+      setRefreshResult(data)
+      if (data.success) {
+        const { data: products } = await supabase.from('appliances').select('*').eq('category', selectedCategory).order('created_at', { ascending: false }).limit(100)
+        setAppliances(products || [])
+      }
+    } catch { setRefreshResult({ success: false, error: 'Failed to refresh prices' }) }
+    finally { setRefreshingPrices(false) }
+  }
+
+  const handleFullSync = async () => {
+    if (!confirm('Run full sync for ALL categories? This may take several minutes and use API credits.')) return
+    setFullSyncing(true)
+    setFullSyncResult(null)
+    try {
+      const response = await fetch('/api/keepa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'full-sync' }) })
+      const data = await response.json()
+      setFullSyncResult(data)
+      fetchCounts()
+      const { data: products } = await supabase.from('appliances').select('*').eq('category', selectedCategory).order('created_at', { ascending: false }).limit(100)
+      setAppliances(products || [])
+    } catch { setFullSyncResult({ success: false, error: 'Full sync failed' }) }
+    finally { setFullSyncing(false) }
   }
 
   return (
@@ -142,19 +169,47 @@ export default function AdminPage() {
         </div>
       </header>
       <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6 mb-6">
+          <h2 className="font-semibold mb-2 flex items-center gap-2"><Zap className="w-5 h-5 text-blue-600" />Full Daily Sync (All Categories)</h2>
+          <p className="text-sm text-slate-600 mb-4">Discovers new products and refreshes prices for ALL categories. Run this daily.</p>
+          <button onClick={handleFullSync} disabled={fullSyncing} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+            {fullSyncing ? <><Loader2 className="w-4 h-4 animate-spin" />Running Full Sync...</> : <><RefreshCw className="w-4 h-4" />Run Full Sync</>}
+          </button>
+          {fullSyncResult && (
+            <div className={`mt-4 p-4 rounded-lg ${fullSyncResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              {fullSyncResult.success ? (
+                <div>
+                  <div className="flex items-center gap-2 text-green-700 mb-2"><CheckCircle className="w-5 h-5" />Full Sync Complete</div>
+                  <div className="text-sm space-y-1">{fullSyncResult.results?.map((r: any, i: number) => (<div key={i} className="flex justify-between"><span>{r.category}</span><span className="text-slate-500">{r.error ? `Error: ${r.error}` : `+${r.created} new, ${r.updated} updated`}</span></div>))}</div>
+                </div>
+              ) : (<div className="flex items-center gap-2 text-red-700"><AlertCircle className="w-5 h-5" />{fullSyncResult.error}</div>)}
+            </div>
+          )}
+        </div>
+
         <div className="bg-white rounded-lg border p-6 mb-6">
           <h2 className="font-semibold mb-4">Products by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {allCategories.map(cat => (
-              <button key={cat} onClick={() => setSelectedCategory(cat)} className={`p-4 rounded-lg text-center transition ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
-                <div className="text-2xl font-bold">{counts[cat] || 0}</div>
-                <div className="text-sm">{cat}</div>
-              </button>
-            ))}
+            {allCategories.map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={`p-4 rounded-lg text-center transition ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}><div className="text-2xl font-bold">{counts[cat] || 0}</div><div className="text-sm">{cat}</div></button>))}
           </div>
         </div>
+
         <div className="bg-white rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">Actions for {selectedCategory}</h2>
+          <h2 className="font-semibold mb-4">Keepa Actions for {selectedCategory}</h2>
+          <div className="flex flex-wrap gap-4">
+            <button onClick={handleDiscover} disabled={discovering || fetchingDetails} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
+              {discovering || fetchingDetails ? <><Loader2 className="w-4 h-4 animate-spin" />{fetchingDetails ? 'Fetching Details...' : 'Discovering...'}</> : <><Search className="w-4 h-4" />Discover New Products</>}
+            </button>
+            <button onClick={handleRefreshPrices} disabled={refreshingPrices} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
+              {refreshingPrices ? <><Loader2 className="w-4 h-4 animate-spin" />Refreshing...</> : <><RefreshCw className="w-4 h-4" />Refresh Prices</>}
+            </button>
+          </div>
+          {discoverResult && (<div className={`mt-4 p-4 rounded-lg ${discoverResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>{discoverResult.success ? (<div><div className="flex items-center gap-2 text-green-700"><CheckCircle className="w-5 h-5" />Found {discoverResult.totalFound} products, {discoverResult.newAsins} new</div>{discoverResult.details && <div className="text-sm text-slate-600 mt-1">Added {discoverResult.details.created} new, updated {discoverResult.details.updated}</div>}</div>) : (<div className="flex items-center gap-2 text-red-700"><AlertCircle className="w-5 h-5" />{discoverResult.error}</div>)}</div>)}
+          {refreshResult && (<div className={`mt-4 p-4 rounded-lg ${refreshResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>{refreshResult.success ? (<div className="flex items-center gap-2 text-green-700"><CheckCircle className="w-5 h-5" />Updated {refreshResult.updated} prices</div>) : (<div className="flex items-center gap-2 text-red-700"><AlertCircle className="w-5 h-5" />{refreshResult.error}</div>)}</div>)}
+        </div>
+
+        <div className="bg-white rounded-lg border p-6 mb-6">
+          <h2 className="font-semibold mb-4">Manual Actions for {selectedCategory}</h2>
           <div className="flex flex-wrap gap-4">
             <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"><Plus className="w-4 h-4" />Add Product</button>
             <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"><Upload className="w-4 h-4" />Import CSV<input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" disabled={importing} /></label>
@@ -163,6 +218,7 @@ export default function AdminPage() {
           {importing && <div className="mt-4 flex items-center gap-2 text-blue-600"><Loader2 className="w-4 h-4 animate-spin" />Importing...</div>}
           {importResult && <div className={`mt-4 p-4 rounded-lg ${importResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>{importResult.success ? <div className="flex items-center gap-2 text-green-700"><CheckCircle className="w-5 h-5" />Imported {importResult.added} products ({importResult.errors} errors)</div> : <div className="flex items-center gap-2 text-red-700"><AlertCircle className="w-5 h-5" />Import failed</div>}</div>}
         </div>
+
         {showAddForm && (
           <div className="bg-white rounded-lg border p-6 mb-6">
             <h2 className="font-semibold mb-4">Add New Product</h2>
@@ -182,20 +238,21 @@ export default function AdminPage() {
             </form>
           </div>
         )}
+
         <div className="bg-white rounded-lg border overflow-hidden">
           <div className="p-4 border-b"><h2 className="font-semibold">{selectedCategory} ({appliances.length} shown)</h2></div>
-          {isLoading ? <div className="p-8 text-center text-slate-500">Loading...</div> : appliances.length === 0 ? <div className="p-8 text-center text-slate-500">No products. Add some or import a CSV!</div> : (
+          {isLoading ? <div className="p-8 text-center text-slate-500">Loading...</div> : appliances.length === 0 ? <div className="p-8 text-center text-slate-500">No products. Use Keepa to discover products!</div> : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50"><tr><th className="text-left px-4 py-3">Image</th><th className="text-left px-4 py-3">Brand</th><th className="text-left px-4 py-3">Model</th><th className="text-left px-4 py-3">Price</th><th className="text-left px-4 py-3">Type</th><th className="text-left px-4 py-3">Actions</th></tr></thead>
+                <thead className="bg-slate-50"><tr><th className="text-left px-4 py-3">Image</th><th className="text-left px-4 py-3">Brand</th><th className="text-left px-4 py-3">Title</th><th className="text-left px-4 py-3">Price</th><th className="text-left px-4 py-3">Rating</th><th className="text-left px-4 py-3">Actions</th></tr></thead>
                 <tbody>
                   {appliances.map(item => (
                     <tr key={item.id} className="border-t hover:bg-slate-50">
                       <td className="px-4 py-3">{item.image_url ? <img src={item.image_url} alt="" className="w-12 h-12 object-contain" /> : <div className="w-12 h-12 bg-slate-200 rounded" />}</td>
                       <td className="px-4 py-3">{item.brand || '—'}</td>
-                      <td className="px-4 py-3">{item.model || '—'}</td>
+                      <td className="px-4 py-3 max-w-xs truncate">{item.title || '—'}</td>
                       <td className="px-4 py-3">{item.price ? `$${item.price}` : '—'}</td>
-                      <td className="px-4 py-3">{item.type || '—'}</td>
+                      <td className="px-4 py-3">{item.rating ? `${item.rating}★` : '—'}</td>
                       <td className="px-4 py-3"><button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button></td>
                     </tr>
                   ))}
