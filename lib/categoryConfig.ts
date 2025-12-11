@@ -26,7 +26,7 @@ export const categoryConfig: Record<string, CategoryConfig> = {
     description: "Compare refrigerator prices and find the best value per cubic foot",
     capacityField: "total_capacity_cuft",
     capacityUnit: "cu.ft.",
-    types: ["French Door", "Side-by-Side", "Top Freezer", "Bottom Freezer", "Mini", "Counter-Depth", "Compact"],
+    types: ["French Door", "Side by Side", "Top Freezer", "Bottom Freezer", "Mini/Compact", "Portable", "Counter-Depth"],
     featureFilters: ["energy_star", "ice_maker", "water_dispenser", "smart_features", "fingerprint_resistant"],
     tableColumns: [
       { key: "image", label: "Image\n(hover)" },

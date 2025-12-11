@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { action, category, asins } = body
 
     if (action === 'test') {
-      // Test endpoint - fetch one product and return full details
+      // Test endpoint - fetch one product and return parsed data
       const testAsin = 'B0B9M9Z1FQ' // A refrigerator from your CSV
       const products = await getProductsByAsins([testAsin], 'Refrigerators')
       return NextResponse.json({
