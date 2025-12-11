@@ -24,6 +24,32 @@ function isPartOrAccessory(title: string): boolean {
   return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
 }
 
+// Image component with hover zoom
+function ProductImage({ src, alt }: { src: string | null, alt: string }) {
+  const [isHovered, setIsHovered] = useState(false)
+  
+  return (
+    <div className="relative">
+      {src ? (
+        <img 
+          src={src} 
+          alt={alt}
+          className="w-16 h-16 object-contain bg-white rounded cursor-pointer"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        />
+      ) : (
+        <div className="w-16 h-16 bg-slate-700 rounded" />
+      )}
+      {isHovered && src && (
+        <div className="absolute z-50 left-full ml-2 top-0 bg-white p-2 rounded-lg shadow-xl border border-slate-600">
+          <img src={src} alt={alt} className="w-48 h-48 object-contain" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 type Appliance = {
   id: string
   asin?: string
@@ -89,12 +115,22 @@ export default function AdminPage() {
     setIsLoading(true)
     setSelectedIds(new Set()) // Clear selections when fetching
     
-    const { count } = await supabase
-      .from('appliances')
-      .select('*', { count: 'exact', head: true })
-      .eq('category', selectedCategory)
-    setTotalCount(count || 0)
+    // Get deleted ASINs first
+    const { data: deletedData } = await supabase
+      .from('deleted_asins')
+      .select('asin')
+    const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
     
+    // Get total count for category (excluding deleted)
+    const { data: allData } = await supabase
+      .from('appliances')
+      .select('id, asin')
+      .eq('category', selectedCategory)
+    
+    const filteredIds = (allData || []).filter(item => !deletedAsins.has(item.asin)).map(item => item.id)
+    setTotalCount(filteredIds.length)
+    
+    // Get paginated data
     const from = currentPage * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
     
@@ -103,9 +139,14 @@ export default function AdminPage() {
       .select('*')
       .eq('category', selectedCategory)
       .order('price', { ascending: true })
-      .range(from, to)
+      .range(from, Math.min(to, 1000))
     
-    if (!error) setAppliances(data || [])
+    if (!error) {
+      // Filter out deleted ASINs
+      const filtered = (data || []).filter(item => !deletedAsins.has(item.asin))
+      // Take only PAGE_SIZE items after filtering
+      setAppliances(filtered.slice(0, PAGE_SIZE))
+    }
     setIsLoading(false)
   }, [selectedCategory, currentPage])
 
@@ -676,11 +717,7 @@ export default function AdminPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt="" className="w-12 h-12 object-contain bg-white rounded" />
-                        ) : (
-                          <div className="w-12 h-12 bg-slate-700 rounded" />
-                        )}
+                        <ProductImage src={item.image_url} alt={item.title || ''} />
                       </td>
                       <td className="px-4 py-3 text-slate-300">{item.brand || '—'}</td>
                       <td className="px-4 py-3 text-slate-300 max-w-xs truncate" title={item.title}>{item.title || '—'}</td>

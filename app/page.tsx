@@ -25,6 +25,34 @@ function isPartOrAccessory(title: string): boolean {
   return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
 }
 
+// Image component with hover zoom
+function ProductImage({ src, alt, link }: { src: string | null, alt: string, link: string }) {
+  const [isHovered, setIsHovered] = useState(false)
+  
+  return (
+    <div className="relative">
+      <Link href={link}>
+        {src ? (
+          <img 
+            src={src} 
+            alt={alt}
+            className="w-16 h-16 object-contain cursor-pointer bg-white rounded"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          />
+        ) : (
+          <div className="w-16 h-16 bg-slate-700 rounded" />
+        )}
+      </Link>
+      {isHovered && src && (
+        <div className="absolute z-50 left-full ml-2 top-0 bg-white p-2 rounded-lg shadow-xl border border-slate-300">
+          <img src={src} alt={alt} className="w-48 h-48 object-contain" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 type Appliance = {
   id: string
   [key: string]: any
@@ -339,17 +367,11 @@ export default function Home() {
                           if (col.key === 'image') {
                             return (
                               <td key={col.key} className="px-2 py-1">
-                                <Link href={`/product/${item.id}`}>
-                                  {item.image_url ? (
-                                    <img 
-                                      src={item.image_url} 
-                                      alt={item.title || `${item.brand} ${item.model}`}
-                                      className="w-8 h-8 object-contain cursor-pointer"
-                                    />
-                                  ) : (
-                                    <div className="w-8 h-8 bg-slate-700 rounded" />
-                                  )}
-                                </Link>
+                                <ProductImage 
+                                  src={item.image_url} 
+                                  alt={item.title || `${item.brand} ${item.model}`}
+                                  link={`/product/${item.id}`}
+                                />
                               </td>
                             )
                           }
