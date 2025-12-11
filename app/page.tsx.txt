@@ -30,6 +30,13 @@ export default function Home() {
     async function fetchAppliances() {
       setIsLoading(true)
       try {
+        // First get deleted ASINs
+        const { data: deletedData } = await supabase
+          .from('deleted_asins')
+          .select('asin')
+        const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
+        
+        // Then get appliances
         const { data, error } = await supabase
           .from('appliances')
           .select('*')
@@ -39,7 +46,10 @@ export default function Home() {
           .limit(1000)
         
         if (error) throw error
-        setAppliances(data || [])
+        
+        // Filter out deleted ASINs
+        const filtered = (data || []).filter(item => !deletedAsins.has(item.asin))
+        setAppliances(filtered)
       } catch (error) {
         console.error('Error fetching appliances:', error)
         setAppliances([])

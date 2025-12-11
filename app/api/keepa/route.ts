@@ -1,11 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { discoverAsins, getProductsByAsins, CATEGORY_CONFIG, KeepaProduct } from '@/lib/keepa'
+import { discoverAsins, getProductsByAsins, queryProducts, CATEGORY_CONFIG, KeepaProduct } from '@/lib/keepa'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+// Words that indicate a product is a part/accessory, not a full appliance
+const PARTS_FILTER_WORDS = [
+  'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
+  'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
+  'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
+  'switch', 'circuit', 'board', 'gasket', 'motherboard', 'timer', 'seal',
+  'compressor', 'fan motor', 'door handle', 'shelf', 'drawer', 'bin',
+  'ice tray', 'water line', 'defrost', 'relay', 'start device'
+]
+
+const MINIMUM_PRICE = 50.00
+
+// Check if a product title indicates it's a part/accessory
+function isPartOrAccessory(title: string): boolean {
+  if (!title) return false
+  const lowerTitle = title.toLowerCase()
+  return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
+}
+
+// Filter products to remove parts and low-priced items
+function filterValidProducts(products: KeepaProduct[]): KeepaProduct[] {
+  return products.filter(product => {
+    // Filter out parts/accessories
+    if (isPartOrAccessory(product.title)) {
+      console.log(`Filtered out part: ${product.title.substring(0, 50)}...`)
+      return false
+    }
+    // Filter out items below minimum price
+    if (product.price !== null && product.price < MINIMUM_PRICE) {
+      console.log(`Filtered out low price ($${product.price}): ${product.title.substring(0, 50)}...`)
+      return false
+    }
+    return true
+  })
+}
 
 // Helper to get deleted ASINs that should be skipped
 async function getDeletedAsins(): Promise<Set<string>> {
@@ -62,11 +98,23 @@ export async function POST(request: NextRequest) {
 
     if (action === 'discover') {
       // Discover new ASINs for a category using Product Finder
+      // Continues from last page fetched
       if (!category || !CATEGORY_CONFIG[category]) {
         return NextResponse.json({ error: 'Invalid category' }, { status: 400 })
       }
 
-      const foundAsins = await discoverAsins(category)
+      // Get the last page we fetched for this category
+      const { data: progressData } = await supabase
+        .from('sync_progress')
+        .select('last_page, total_discovered')
+        .eq('category', category)
+        .single()
+      
+      const startPage = progressData?.last_page || 0
+      const previousTotal = progressData?.total_discovered || 0
+      
+      // Fetch next 5 pages (500 products)
+      const pagesToFetch = 5
       const deletedAsins = await getDeletedAsins()
       
       // Get existing ASINs
@@ -76,14 +124,55 @@ export async function POST(request: NextRequest) {
         .eq('category', category)
       
       const existingAsins = new Set(existing?.map(e => e.asin) || [])
-      const newAsins = foundAsins.filter(asin => !existingAsins.has(asin) && !deletedAsins.has(asin))
+      
+      let allFoundAsins: string[] = []
+      let lastPageWithResults = startPage
+      let noMoreResults = false
+      
+      for (let page = startPage; page < startPage + pagesToFetch; page++) {
+        try {
+          console.log(`Fetching ${category} page ${page}...`)
+          const result = await queryProducts(category, page)
+          
+          if (result.asins.length === 0) {
+            console.log(`No more results for ${category} at page ${page}`)
+            noMoreResults = true
+            break
+          }
+          
+          allFoundAsins.push(...result.asins)
+          lastPageWithResults = page + 1 // Next page to fetch
+          
+          // Rate limiting
+          await new Promise(resolve => setTimeout(resolve, 300))
+        } catch (error) {
+          console.error(`Error fetching page ${page}:`, error)
+          break
+        }
+      }
+      
+      // Filter out existing and deleted ASINs
+      const newAsins = allFoundAsins.filter(asin => !existingAsins.has(asin) && !deletedAsins.has(asin))
+      
+      // Update progress tracker
+      await supabase
+        .from('sync_progress')
+        .upsert({
+          category,
+          last_page: noMoreResults ? 0 : lastPageWithResults, // Reset to 0 if we've reached the end
+          total_discovered: previousTotal + newAsins.length,
+          last_sync_at: new Date().toISOString()
+        }, { onConflict: 'category' })
 
       return NextResponse.json({
         success: true,
         category,
-        totalFound: foundAsins.length,
+        pagesScanned: `${startPage} to ${lastPageWithResults - 1}`,
+        nextPage: noMoreResults ? 'Complete - will restart from 0' : lastPageWithResults,
+        totalFound: allFoundAsins.length,
         newAsins: newAsins.length,
-        skippedDeleted: foundAsins.filter(a => deletedAsins.has(a)).length,
+        skippedExisting: allFoundAsins.filter(a => existingAsins.has(a)).length,
+        skippedDeleted: allFoundAsins.filter(a => deletedAsins.has(a)).length,
         asins: newAsins
       })
     }
@@ -97,11 +186,15 @@ export async function POST(request: NextRequest) {
       const deletedAsins = await getDeletedAsins()
       const filteredAsins = asins.filter((asin: string) => !deletedAsins.has(asin))
 
-      const products = await getProductsByAsins(filteredAsins, category)
+      const rawProducts = await getProductsByAsins(filteredAsins, category)
+      
+      // Filter out parts/accessories and low-priced items
+      const products = filterValidProducts(rawProducts)
       
       let created = 0
       let updated = 0
       let errors = 0
+      let filteredOut = rawProducts.length - products.length
 
       for (const product of products) {
         const record = buildRecord(product)
@@ -144,7 +237,8 @@ export async function POST(request: NextRequest) {
         category,
         created,
         updated,
-        errors
+        errors,
+        filteredOut
       })
     }
 
