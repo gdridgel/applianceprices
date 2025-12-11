@@ -35,6 +35,11 @@ export interface KeepaProduct {
   asin: string
   title: string
   brand: string
+  manufacturer: string
+  model: string
+  color: string
+  size: string
+  weight: number | null
   price: number | null
   listPrice: number | null
   rating: number | null
@@ -43,6 +48,8 @@ export interface KeepaProduct {
   imageUrls: string[]
   productUrl: string
   category: string
+  features: string[]
+  description: string
 }
 
 function keepaPriceToDollars(price: number | null | undefined): number | null {
@@ -96,10 +103,23 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       })
     }
 
+    // Extract weight from packageWeight or itemWeight (in hundredths of pounds)
+    let weight = null
+    if (item.packageWeight) {
+      weight = item.packageWeight / 100
+    } else if (item.itemWeight) {
+      weight = item.itemWeight / 100
+    }
+
     return {
       asin: item.asin,
       title: item.title || '',
       brand: item.brand || '',
+      manufacturer: item.manufacturer || '',
+      model: item.model || '',
+      color: item.color || '',
+      size: item.size || '',
+      weight,
       price,
       listPrice,
       rating: item.rating ? item.rating / 10 : null,
@@ -107,7 +127,9 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       imageUrl: imageUrls[0] || null,
       imageUrls,
       productUrl: `https://www.amazon.com/dp/${item.asin}`,
-      category
+      category,
+      features: item.features || [],
+      description: item.description || ''
     }
   } catch (error) {
     console.error('Error parsing Keepa product:', error)

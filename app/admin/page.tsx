@@ -165,16 +165,16 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Link href="/" className="p-2 hover:bg-slate-100 rounded-lg"><ArrowLeft className="w-5 h-5" /></Link>
-          <h1 className="text-xl font-bold">Admin Dashboard</h1>
+          <Link href="/" className="p-2 hover:bg-slate-100 rounded-lg text-slate-700"><ArrowLeft className="w-5 h-5" /></Link>
+          <h1 className="text-xl font-bold text-slate-900">Admin Dashboard</h1>
         </div>
       </header>
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6 mb-6">
-          <h2 className="font-semibold mb-2 flex items-center gap-2"><Zap className="w-5 h-5 text-blue-600" />Full Daily Sync (All Categories)</h2>
+          <h2 className="font-semibold mb-2 flex items-center gap-2 text-slate-900"><Zap className="w-5 h-5 text-blue-600" />Full Daily Sync (All Categories)</h2>
           <p className="text-sm text-slate-600 mb-4">Discovers new products and refreshes prices for ALL categories. Run this daily.</p>
           <button onClick={handleFullSync} disabled={fullSyncing} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {fullSyncing ? <><Loader2 className="w-4 h-4 animate-spin" />Running Full Sync...</> : <><RefreshCw className="w-4 h-4" />Run Full Sync</>}
@@ -184,7 +184,7 @@ export default function AdminPage() {
               {fullSyncResult.success ? (
                 <div>
                   <div className="flex items-center gap-2 text-green-700 mb-2"><CheckCircle className="w-5 h-5" />Full Sync Complete</div>
-                  <div className="text-sm space-y-1">{fullSyncResult.results?.map((r: any, i: number) => (<div key={i} className="flex justify-between"><span>{r.category}</span><span className="text-slate-500">{r.error ? `Error: ${r.error}` : `+${r.created} new, ${r.updated} updated`}</span></div>))}</div>
+                  <div className="text-sm space-y-1">{fullSyncResult.results?.map((r: any, i: number) => (<div key={i} className="flex justify-between text-slate-700"><span>{r.category}</span><span className="text-slate-500">{r.error ? `Error: ${r.error}` : `+${r.created} new, ${r.updated} updated`}</span></div>))}</div>
                 </div>
               ) : (<div className="flex items-center gap-2 text-red-700"><AlertCircle className="w-5 h-5" />{fullSyncResult.error}</div>)}
             </div>
@@ -192,14 +192,14 @@ export default function AdminPage() {
         </div>
 
         <div className="bg-white rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">Products by Category</h2>
+          <h2 className="font-semibold mb-4 text-slate-900">Products by Category</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {allCategories.map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={`p-4 rounded-lg text-center transition ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200'}`}><div className="text-2xl font-bold">{counts[cat] || 0}</div><div className="text-sm">{cat}</div></button>))}
+            {allCategories.map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={`p-4 rounded-lg text-center transition ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'}`}><div className="text-2xl font-bold">{counts[cat] || 0}</div><div className="text-sm">{cat}</div></button>))}
           </div>
         </div>
 
         <div className="bg-white rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">Keepa Actions for {selectedCategory}</h2>
+          <h2 className="font-semibold mb-4 text-slate-900">Keepa Actions for {selectedCategory}</h2>
           <div className="flex flex-wrap gap-4">
             <button onClick={handleDiscover} disabled={discovering || fetchingDetails} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
               {discovering || fetchingDetails ? <><Loader2 className="w-4 h-4 animate-spin" />{fetchingDetails ? 'Fetching Details...' : 'Discovering...'}</> : <><Search className="w-4 h-4" />Discover New Products</>}
@@ -213,7 +213,7 @@ export default function AdminPage() {
         </div>
 
         <div className="bg-white rounded-lg border p-6 mb-6">
-          <h2 className="font-semibold mb-4">Manual Actions for {selectedCategory}</h2>
+          <h2 className="font-semibold mb-4 text-slate-900">Manual Actions for {selectedCategory}</h2>
           <div className="flex flex-wrap gap-4">
             <button onClick={() => setShowAddForm(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"><Plus className="w-4 h-4" />Add Product</button>
             <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"><Upload className="w-4 h-4" />Import CSV<input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" disabled={importing} /></label>
@@ -225,48 +225,48 @@ export default function AdminPage() {
 
         {showAddForm && (
           <div className="bg-white rounded-lg border p-6 mb-6">
-            <h2 className="font-semibold mb-4">Add New Product</h2>
+            <h2 className="font-semibold mb-4 text-slate-900">Add New Product</h2>
             <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium mb-1">Category</label><select value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} className="w-full border rounded-lg px-3 py-2">{allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
-              <div><label className="block text-sm font-medium mb-1">Brand</label><input type="text" value={newProduct.brand} onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm font-medium mb-1">Model</label><input type="text" value={newProduct.model} onChange={e => setNewProduct({ ...newProduct, model: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm font-medium mb-1">Title</label><input type="text" value={newProduct.title} onChange={e => setNewProduct({ ...newProduct, title: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm font-medium mb-1">Price</label><input type="number" step="0.01" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
-              <div><label className="block text-sm font-medium mb-1">Type</label><input type="text" value={newProduct.type} onChange={e => setNewProduct({ ...newProduct, type: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
-              <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Product URL</label><input type="url" value={newProduct.product_url} onChange={e => setNewProduct({ ...newProduct, product_url: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
-              <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Image URL</label><input type="url" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} className="w-full border rounded-lg px-3 py-2" /></div>
+              <div><label className="block text-sm font-medium mb-1 text-slate-700">Category</label><select value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900">{allCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></div>
+              <div><label className="block text-sm font-medium mb-1 text-slate-700">Brand</label><input type="text" value={newProduct.brand} onChange={e => setNewProduct({ ...newProduct, brand: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
+              <div><label className="block text-sm font-medium mb-1 text-slate-700">Model</label><input type="text" value={newProduct.model} onChange={e => setNewProduct({ ...newProduct, model: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
+              <div><label className="block text-sm font-medium mb-1 text-slate-700">Title</label><input type="text" value={newProduct.title} onChange={e => setNewProduct({ ...newProduct, title: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
+              <div><label className="block text-sm font-medium mb-1 text-slate-700">Price</label><input type="number" step="0.01" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
+              <div><label className="block text-sm font-medium mb-1 text-slate-700">Type</label><input type="text" value={newProduct.type} onChange={e => setNewProduct({ ...newProduct, type: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
+              <div className="md:col-span-2"><label className="block text-sm font-medium mb-1 text-slate-700">Product URL</label><input type="url" value={newProduct.product_url} onChange={e => setNewProduct({ ...newProduct, product_url: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
+              <div className="md:col-span-2"><label className="block text-sm font-medium mb-1 text-slate-700">Image URL</label><input type="url" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-slate-900" /></div>
               <div className="md:col-span-2 flex gap-4">
                 <button type="submit" disabled={adding} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">{adding ? 'Adding...' : 'Add Product'}</button>
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-6 py-2 bg-slate-200 rounded-lg hover:bg-slate-300">Cancel</button>
+                <button type="button" onClick={() => setShowAddForm(false)} className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300">Cancel</button>
               </div>
             </form>
           </div>
         )}
 
         <div className="bg-white rounded-lg border overflow-hidden">
-          <div className="p-4 border-b"><h2 className="font-semibold">{selectedCategory} ({appliances.length} shown)</h2></div>
+          <div className="p-4 border-b"><h2 className="font-semibold text-slate-900">{selectedCategory} ({appliances.length} shown)</h2></div>
           {isLoading ? <div className="p-8 text-center text-slate-500">Loading...</div> : appliances.length === 0 ? <div className="p-8 text-center text-slate-500">No products. Use Keepa to discover products!</div> : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="text-left px-4 py-3">Image</th>
-                    <th className="text-left px-4 py-3">Brand</th>
-                    <th className="text-left px-4 py-3">Title</th>
-                    <th className="text-left px-4 py-3">Price</th>
-                    <th className="text-left px-4 py-3">Rating</th>
-                    <th className="text-left px-4 py-3">Link</th>
-                    <th className="text-left px-4 py-3">Actions</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Image</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Brand</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Title</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Price</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Rating</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Link</th>
+                    <th className="text-left px-4 py-3 text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {appliances.map(item => (
                     <tr key={item.id} className="border-t hover:bg-slate-50">
                       <td className="px-4 py-3 relative">{item.image_url ? <img src={item.image_url} alt="" className="w-12 h-12 object-contain hover:scale-[4] hover:z-50 hover:absolute hover:bg-white hover:shadow-lg hover:rounded transition-transform duration-200 cursor-pointer" /> : <div className="w-12 h-12 bg-slate-200 rounded" />}</td>
-                      <td className="px-4 py-3">{item.brand || '—'}</td>
-                      <td className="px-4 py-3 max-w-xs truncate">{item.title || '—'}</td>
-                      <td className="px-4 py-3 font-medium">{item.price ? `$${item.price.toLocaleString()}` : '—'}</td>
-                      <td className="px-4 py-3">{item.rating ? `${item.rating}★` : '—'}</td>
+                      <td className="px-4 py-3 text-slate-900">{item.brand || '—'}</td>
+                      <td className="px-4 py-3 max-w-xs truncate text-slate-900">{item.title || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{item.price ? `$${item.price.toLocaleString()}` : '—'}</td>
+                      <td className="px-4 py-3 text-slate-900">{item.rating ? `${item.rating}★` : '—'}</td>
                       <td className="px-4 py-3">{item.product_url ? <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View on Amazon</a> : '—'}</td>
                       <td className="px-4 py-3"><button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button></td>
                     </tr>

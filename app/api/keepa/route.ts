@@ -63,6 +63,8 @@ export async function POST(request: NextRequest) {
           asin: product.asin,
           title: product.title,
           brand: product.brand,
+          model: product.model,
+          color: product.color,
           price: product.price,
           list_price: product.listPrice,
           rating: product.rating,
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
           image_url: product.imageUrl,
           image_urls: product.imageUrls,
           product_url: product.productUrl,
+          weight_lbs: product.weight,
           updated_at: new Date().toISOString()
         }
 
@@ -126,6 +129,10 @@ export async function POST(request: NextRequest) {
             list_price: product.listPrice,
             rating: product.rating,
             review_count: product.reviewCount,
+            brand: product.brand,
+            model: product.model,
+            color: product.color,
+            weight_lbs: product.weight,
             updated_at: new Date().toISOString()
           })
           .eq('asin', product.asin)
@@ -166,13 +173,16 @@ export async function POST(request: NextRequest) {
                   asin: product.asin,
                   title: product.title,
                   brand: product.brand,
+                  model: product.model,
+                  color: product.color,
                   price: product.price,
                   list_price: product.listPrice,
                   rating: product.rating,
                   review_count: product.reviewCount,
                   image_url: product.imageUrl,
                   image_urls: product.imageUrls,
-                  product_url: product.productUrl
+                  product_url: product.productUrl,
+                  weight_lbs: product.weight
                 }])
               if (error) errors++
               else created++
@@ -192,6 +202,10 @@ export async function POST(request: NextRequest) {
                   list_price: product.listPrice,
                   rating: product.rating,
                   review_count: product.reviewCount,
+                  brand: product.brand,
+                  model: product.model,
+                  color: product.color,
+                  weight_lbs: product.weight,
                   updated_at: new Date().toISOString()
                 })
                 .eq('asin', product.asin)
