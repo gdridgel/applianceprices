@@ -210,6 +210,7 @@ async function refreshPrices(limit: number = MAX_REFRESH_PRODUCTS) {
         const updatedProducts = await getProductsByAsins(asins, category)
 
         for (const product of updatedProducts) {
+          // Update ALL fields, not just price
           const { error } = await supabase
             .from('appliances')
             .update({
@@ -217,6 +218,23 @@ async function refreshPrices(limit: number = MAX_REFRESH_PRODUCTS) {
               list_price: product.listPrice,
               rating: product.rating,
               review_count: product.reviewCount,
+              brand: product.brand,
+              model: product.model,
+              color: product.color,
+              image_url: product.imageUrl,
+              image_urls: product.imageUrls,
+              video_urls: product.videoUrls,
+              width_in: product.widthIn,
+              depth_in: product.depthIn,
+              height_in: product.heightIn,
+              weight_lbs: product.weightLbs,
+              capacity_cu_ft: product.capacityCuFt,
+              screen_size: product.screenSize,
+              btu: product.btu,
+              energy_star: product.energyStar,
+              ice_maker: product.iceMaker,
+              water_dispenser: product.waterDispenser,
+              type: product.type,
               updated_at: new Date().toISOString()
             })
             .eq('asin', product.asin)
