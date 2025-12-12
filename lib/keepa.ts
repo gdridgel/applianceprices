@@ -38,6 +38,10 @@ const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[
   'Window AC': {
     categoryId: '1193678',
     searchTerms: ['window air conditioner']
+  },
+  'Televisions': {
+    categoryId: '172659',
+    searchTerms: ['television', 'tv']
   }
 }
 
@@ -139,6 +143,13 @@ function parseBtu(text: string): number | null {
 function parseType(text: string): string | null {
   if (!text) return null
   const lowerText = text.toLowerCase()
+  
+  // TV types
+  if (/oled/i.test(lowerText)) return 'OLED TV'
+  if (/qled/i.test(lowerText)) return 'QLED TV'
+  if (/tv[\s-]*dvd|dvd[\s-]*tv|dvd\s*combo/i.test(lowerText)) return 'TV-DVD Combination'
+  if (/portable\s*tv/i.test(lowerText)) return 'Portable TV'
+  if (/led|lcd/i.test(lowerText) && /tv|television/i.test(lowerText)) return 'LED & LCD TV'
   
   // Refrigerator types
   if (/french\s*door/i.test(lowerText)) return 'French Door'

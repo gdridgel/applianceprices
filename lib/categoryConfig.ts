@@ -253,6 +253,31 @@ export const categoryConfig: Record<string, CategoryConfig> = {
       { key: "rating", label: "Rating" },
       { key: "link", label: "Retailer Link" }
     ]
+  },
+  "Televisions": {
+    icon: AirVent,
+    slug: "televisions",
+    entity: "Television",
+    title: "Televisions",
+    description: "Compare TV prices and screen sizes",
+    capacityField: "screen_size",
+    capacityUnit: "inches",
+    types: ["LED & LCD TV", "OLED TV", "Portable TV", "QLED TV", "TV-DVD Combination"],
+    featureFilters: ["smart_tv", "hdr", "4k", "8k", "curved"],
+    tableColumns: [
+      { key: "image", label: "Image\n(hover)" },
+      { key: "price", label: "Price" },
+      { key: "brand", label: "Brand" },
+      { key: "model", label: "Model" },
+      { key: "type", label: "Type" },
+      { key: "screen_size", label: "Size (in)" },
+      { key: "resolution", label: "Resolution" },
+      { key: "refresh_rate", label: "Refresh (Hz)" },
+      { key: "smart_tv", label: "Smart", type: "boolean" },
+      { key: "hdr", label: "HDR", type: "boolean" },
+      { key: "rating", label: "Rating" },
+      { key: "link", label: "Retailer Link" }
+    ]
   }
 }
 
