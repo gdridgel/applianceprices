@@ -292,7 +292,7 @@ export default function DealsPage() {
 
                 {/* View on Amazon Button */}
                 <a
-                  href={`https://www.amazon.com/dp/${deal.asin}?tag=${appliances04d-20}`}
+                  href={`https://www.amazon.com/dp/${deal.asin}?tag=${AFFILIATE_TAG}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 text-sm"
