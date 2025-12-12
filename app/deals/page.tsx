@@ -6,8 +6,9 @@ import Link from 'next/link'
 
 const AFFILIATE_TAG = 'appliances04d-20'
 
-// Categories list (hardcoded to avoid import issues)
+// Categories list
 const CATEGORIES = [
+  'All Categories',
   'Refrigerators',
   'Freezers',
   'Dishwashers',
@@ -16,48 +17,30 @@ const CATEGORIES = [
   'Dryers',
   'Air Fryers',
   'Ice Makers',
-  'Window AC',
+  'Air Conditioners',
   'Televisions'
 ]
 
-// Category IDs for Keepa
-const CATEGORY_IDS: Record<string, number> = {
-  'Refrigerators': 3741361,
-  'Freezers': 3741331,
-  'Dishwashers': 3741271,
-  'Ranges': 3741411,
-  'Washers': 13397491,
-  'Dryers': 13397481,
-  'Air Fryers': 289913,
-  'Ice Makers': 2399939011,
-  'Window AC': 1193678,
-  'Televisions': 172659
-}
-
 type Deal = {
+  id: string
   asin: string
   title: string
-  currentPrice: number | null
-  previousPrice: number | null
-  dropPercent: number | null
-  dropAmount: number | null
-  salesRank: number | null
+  brand: string
+  price: number
+  list_price: number
+  discount: number
+  savings: number
   rating: number | null
-  reviewCount: number | null
-  image: string | null
-}
-
-// Build Amazon image URL from ASIN if no image provided
-function getImageUrl(image: string | null, asin: string): string {
-  if (image) return image
-  // Fallback to Amazon product image
-  return `https://images-na.ssl-images-amazon.com/images/P/${asin}.jpg`
+  review_count: number | null
+  image_url: string | null
+  category: string
+  type: string | null
 }
 
 // Image component with hover zoom
 function ProductImage({ src, alt, asin }: { src: string | null, alt: string, asin: string }) {
   const [isHovered, setIsHovered] = useState(false)
-  const imageUrl = getImageUrl(src, asin)
+  const imageUrl = src || `https://images-na.ssl-images-amazon.com/images/P/${asin}.jpg`
   
   return (
     <div 
@@ -69,9 +52,8 @@ function ProductImage({ src, alt, asin }: { src: string | null, alt: string, asi
         <img 
           src={imageUrl} 
           alt={alt}
-          className="w-20 h-20 object-contain cursor-pointer bg-white rounded"
+          className="w-24 h-24 object-contain cursor-pointer bg-white rounded"
           onError={(e) => {
-            // If image fails, show placeholder
             (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="%23374151" width="80" height="80"/><text fill="%239CA3AF" x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="10">No Image</text></svg>'
           }}
         />
@@ -86,11 +68,10 @@ function ProductImage({ src, alt, asin }: { src: string | null, alt: string, asi
 }
 
 export default function DealsPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [minDiscount, setMinDiscount] = useState(20)
-  const [dateRange, setDateRange] = useState(1) // 0=day, 1=week, 2=month
+  const [selectedCategory, setSelectedCategory] = useState<string>('All Categories')
+  const [minDiscount, setMinDiscount] = useState(10)
   const [deals, setDeals] = useState<Deal[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
@@ -99,25 +80,14 @@ export default function DealsPage() {
     setError(null)
     
     try {
-      // Build category IDs array
-      let categoryIds: number[] = []
-      if (selectedCategory === 'all') {
-        categoryIds = Object.values(CATEGORY_IDS)
-      } else if (CATEGORY_IDS[selectedCategory]) {
-        categoryIds = [CATEGORY_IDS[selectedCategory]]
-      }
-
       const response = await fetch('/api/keepa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'browse-deals',
-          categoryIds,
+          action: 'database-deals',
+          category: selectedCategory === 'All Categories' ? 'all' : selectedCategory,
           minDiscount,
-          minPrice: 5000,    // $50 minimum
-          maxPrice: 1000000, // $10,000 maximum
-          dateRange,
-          minRating: 30      // 3+ stars
+          limit: 200
         })
       })
 
@@ -138,39 +108,40 @@ export default function DealsPage() {
 
   useEffect(() => {
     fetchDeals()
-  }, [selectedCategory, minDiscount, dateRange])
+  }, [selectedCategory, minDiscount])
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="border-b border-slate-700 bg-black sticky top-0 z-40">
         <div className="px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-600 rounded-lg">
-              <TrendingDown className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Price Drops</h1>
-              <p className="text-xs text-slate-400">Products with recent price reductions</p>
+          <Link href="/" className="flex items-baseline gap-3">
+            <span className="text-2xl font-bold">
+              <span className="text-blue-400">Appliance</span> Prices
+            </span>
+            <span className="text-slate-400 text-sm hidden sm:block">Smart Shoppers Start Here</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-green-400">
+              <TrendingDown className="w-5 h-5" />
+              <span className="font-medium">Deals</span>
             </div>
           </div>
-          <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">← Back to Products</Link>
         </div>
       </header>
 
       <div className="px-4 py-6">
         {/* Filters */}
         <div className="bg-slate-900 rounded-lg border border-slate-700 p-4 mb-6">
-          <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex flex-wrap items-center gap-4">
             {/* Category Filter */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Category</label>
+              <label className="text-xs text-slate-400 block mb-1">Category</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm"
               >
-                <option value="all">All Categories</option>
                 {CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
@@ -179,52 +150,50 @@ export default function DealsPage() {
 
             {/* Min Discount Filter */}
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Min Discount</label>
+              <label className="text-xs text-slate-400 block mb-1">Min Discount</label>
               <select
                 value={minDiscount}
                 onChange={(e) => setMinDiscount(parseInt(e.target.value))}
                 className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm"
               >
-                <option value={10}>10% off</option>
-                <option value={20}>20% off</option>
-                <option value={30}>30% off</option>
-                <option value={40}>40% off</option>
-                <option value={50}>50% off</option>
-              </select>
-            </div>
-
-            {/* Time Range Filter */}
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Price Drop Within</label>
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(parseInt(e.target.value))}
-                className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm"
-              >
-                <option value={0}>Last 24 hours</option>
-                <option value={1}>Last week</option>
-                <option value={2}>Last month</option>
-                <option value={3}>Last 3 months</option>
+                <option value={5}>5%+</option>
+                <option value={10}>10%+</option>
+                <option value={15}>15%+</option>
+                <option value={20}>20%+</option>
+                <option value={25}>25%+</option>
+                <option value={30}>30%+</option>
+                <option value={40}>40%+</option>
+                <option value={50}>50%+</option>
               </select>
             </div>
 
             {/* Refresh Button */}
-            <button
-              onClick={fetchDeals}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
-            >
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Refresh
-            </button>
+            <div className="flex items-end">
+              <button
+                onClick={fetchDeals}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Refresh
+              </button>
+            </div>
 
             {/* Last Updated */}
             {lastUpdated && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 self-end pb-2">
                 Updated: {lastUpdated.toLocaleTimeString()}
               </span>
             )}
           </div>
+        </div>
+
+        {/* Info Banner */}
+        <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4 mb-6">
+          <p className="text-green-300 text-sm">
+            💰 Showing products where the current price is below the list price. 
+            These are instant savings available right now on Amazon!
+          </p>
         </div>
 
         {/* Error Message */}
@@ -246,81 +215,80 @@ export default function DealsPage() {
           </div>
         ) : deals.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
-            No deals found. Try adjusting your filters.
+            No deals found. Try lowering the minimum discount.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {deals.map((deal) => (
-              <div key={deal.asin} className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-slate-500 transition">
+              <a 
+                key={deal.id} 
+                href={`https://www.amazon.com/dp/${deal.asin}?tag=${AFFILIATE_TAG}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-green-500 transition block"
+              >
+                {/* Discount Badge */}
+                <div className="flex justify-between items-start mb-3">
+                  <span className="bg-green-600 text-white text-sm font-bold px-2 py-1 rounded">
+                    {deal.discount}% OFF
+                  </span>
+                  <span className="text-xs text-slate-500">{deal.category}</span>
+                </div>
+
                 {/* Image */}
                 <div className="flex justify-center mb-3">
-                  <ProductImage src={deal.image} alt={deal.title || ''} asin={deal.asin} />
+                  <ProductImage src={deal.image_url} alt={deal.title || ''} asin={deal.asin} />
                 </div>
 
-                {/* Discount Badge - only show if valid number */}
-                {deal.dropPercent && !isNaN(deal.dropPercent) && deal.dropPercent > 0 && (
-                  <div className="flex justify-center mb-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-600 rounded text-sm font-bold">
-                      <Percent className="w-3 h-3" />
-                      {Math.round(Math.abs(deal.dropPercent))}% OFF
-                    </span>
-                  </div>
-                )}
-
-                {/* Title */}
-                <h3 className="text-sm text-slate-300 line-clamp-2 mb-2 min-h-[40px]">
-                  {deal.title || 'Unknown Product'}
-                </h3>
-
-                {/* Prices */}
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-xl font-bold text-white">
-                    {deal.currentPrice ? `$${deal.currentPrice.toLocaleString()}` : '—'}
-                  </span>
-                  {deal.previousPrice && deal.currentPrice && deal.previousPrice > deal.currentPrice && (
-                    <span className="text-sm text-slate-500 line-through">
-                      ${deal.previousPrice.toLocaleString()}
-                    </span>
+                {/* Brand & Title */}
+                <div className="mb-3">
+                  {deal.brand && (
+                    <p className="text-xs text-slate-500 uppercase">{deal.brand}</p>
                   )}
+                  <h3 className="text-sm text-slate-200 line-clamp-2" title={deal.title}>
+                    {deal.title}
+                  </h3>
                 </div>
 
-                {/* Savings */}
-                {deal.dropAmount && deal.dropAmount > 0 && (
-                  <div className="text-green-400 text-sm mb-2">
-                    You save: ${deal.dropAmount.toLocaleString()}
+                {/* Price */}
+                <div className="mb-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold text-green-400">
+                      ${deal.price?.toFixed(2)}
+                    </span>
+                    <span className="text-sm text-slate-500 line-through">
+                      ${deal.list_price?.toFixed(2)}
+                    </span>
                   </div>
-                )}
+                  <p className="text-xs text-green-500">
+                    Save ${deal.savings}
+                  </p>
+                </div>
 
                 {/* Rating */}
                 {deal.rating && (
-                  <div className="flex items-center gap-1 text-sm text-slate-400 mb-3">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    {deal.rating.toFixed(1)}
-                    {deal.reviewCount && (
-                      <span>({deal.reviewCount.toLocaleString()})</span>
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                    <span>{deal.rating}</span>
+                    {deal.review_count && (
+                      <span className="text-slate-500">({deal.review_count.toLocaleString()})</span>
                     )}
                   </div>
                 )}
 
-                {/* View on Amazon Button */}
-                <a
-                  href={`https://www.amazon.com/dp/${deal.asin}?tag=${AFFILIATE_TAG}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 text-sm"
-                >
-                  View on Amazon
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
+                {/* Type */}
+                {deal.type && (
+                  <p className="text-xs text-slate-500 mt-1">{deal.type}</p>
+                )}
+              </a>
             ))}
           </div>
         )}
 
         {/* Affiliate Disclosure */}
-        <div className="mt-8 pt-4 border-t border-slate-700">
+        <div className="mt-8 pt-4 border-t border-slate-800">
           <p className="text-xs text-slate-500 text-center">
-            As an Amazon Associate we earn from qualifying purchases. Prices and availability are subject to change.
+            As an Amazon Associate we earn from qualifying purchases. Prices and availability subject to change.
           </p>
         </div>
       </div>

@@ -35,9 +35,9 @@ const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[
     categoryId: '2399939011',
     searchTerms: ['ice maker']
   },
-  'Window AC': {
-    categoryId: '3737721',
-    searchTerms: ['window air conditioner']
+  'Air Conditioners': {
+    categoryId: '14554126011',
+    searchTerms: ['air conditioner', 'window ac', 'portable ac']
   },
   'Televisions': {
     categoryId: '172659',

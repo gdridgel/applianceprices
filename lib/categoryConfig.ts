@@ -229,21 +229,22 @@ export const categoryConfig: Record<string, CategoryConfig> = {
       { key: "link", label: "Retailer Link" }
     ]
   },
-  "Window AC": {
+  "Air Conditioners": {
     icon: AirVent,
-    slug: "window-ac",
-    entity: "WindowAC",
-    title: "Window Air Conditioners",
-    description: "Compare window AC prices and BTU ratings",
+    slug: "air-conditioners",
+    entity: "AirConditioner",
+    title: "Air Conditioners",
+    description: "Compare air conditioner prices and BTU ratings",
     capacityField: "btu",
     capacityUnit: "BTU",
-    types: ["Standard", "U-Shaped", "Saddle", "Casement", "Slider"],
+    types: ["Window", "Portable", "Split-System", "Through-the-Wall"],
     featureFilters: ["energy_star", "smart_features", "heater_included", "remote_control"],
     tableColumns: [
       { key: "image", label: "Image\n(hover)" },
       { key: "price", label: "Price" },
       { key: "brand", label: "Brand" },
       { key: "model", label: "Model" },
+      { key: "type", label: "Type" },
       { key: "btu", label: "BTU" },
       { key: "cooling_sqft", label: "Sq Ft" },
       { key: "ceer", label: "CEER" },

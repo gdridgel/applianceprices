@@ -13,7 +13,7 @@ const CATEGORY_ROTATION = [
   ['Dishwashers', 'Ranges'],
   ['Washers', 'Dryers'],
   ['Televisions', 'Air Fryers'],
-  ['Ice Makers', 'Window AC'],
+  ['Ice Makers', 'Air Conditioners'],
   ['REFRESH'] // Hour 5 = refresh cycle
 ]
 

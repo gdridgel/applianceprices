@@ -16,7 +16,7 @@ const categories = [
   'Dryers',
   'Air Fryers',
   'Ice Makers',
-  'Window AC',
+  'Air Conditioners',
   'Televisions'
 ]
 
