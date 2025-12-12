@@ -14,7 +14,8 @@ const PARTS_FILTER_WORDS = [
   'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
   'switch', 'circuit', 'board', 'gasket', 'motherboard', 'timer', 'seal',
   'compressor', 'fan motor', 'door handle', 'shelf', 'drawer', 'bin',
-  'ice tray', 'water line', 'defrost', 'relay', 'start device'
+  'ice tray', 'water line', 'defrost', 'relay', 'start device',
+  'kegerator', 'keg cooler', 'beer dispenser', 'beverage cooler'
 ]
 
 const MINIMUM_PRICE = 50.00

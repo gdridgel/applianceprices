@@ -29,7 +29,7 @@ const CATEGORY_IDS: Record<string, number> = {
   'Washers': 13397491,
   'Dryers': 13397481,
   'Air Fryers': 289913,
-  'Ice Makers': 2686378011,
+  'Ice Makers': 2399939011,
   'Window AC': 1193678,
   'Televisions': 172659
 }

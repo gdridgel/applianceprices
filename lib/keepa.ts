@@ -32,7 +32,7 @@ const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[
     searchTerms: ['air fryer']
   },
   'Ice Makers': {
-    categoryId: '2686378011',
+    categoryId: '2399939011',
     searchTerms: ['ice maker']
   },
   'Window AC': {
