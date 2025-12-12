@@ -121,32 +121,34 @@ export default function AdminPage() {
       .select('asin')
     const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
     
-    // Get total count for category (excluding deleted)
-    const { data: allData } = await supabase
-      .from('appliances')
-      .select('id, asin')
-      .eq('category', selectedCategory)
-    
-    const filteredIds = (allData || []).filter(item => !deletedAsins.has(item.asin)).map(item => item.id)
-    setTotalCount(filteredIds.length)
-    
-    // Get paginated data
-    const from = currentPage * PAGE_SIZE
-    const to = from + PAGE_SIZE - 1
-    
-    const { data, error } = await supabase
+    // Get all products with price >= $50 (same as homepage)
+    const { data: allData, error } = await supabase
       .from('appliances')
       .select('*')
       .eq('category', selectedCategory)
+      .gte('price', MINIMUM_PRICE)
+      .not('price', 'is', null)
       .order('price', { ascending: true })
-      .range(from, Math.min(to, 1000))
     
-    if (!error) {
-      // Filter out deleted ASINs
-      const filtered = (data || []).filter(item => !deletedAsins.has(item.asin))
-      // Take only PAGE_SIZE items after filtering
-      setAppliances(filtered.slice(0, PAGE_SIZE))
+    if (error) {
+      setIsLoading(false)
+      return
     }
+    
+    // Filter out deleted ASINs and parts/accessories (same as homepage)
+    const filtered = (allData || []).filter(item => {
+      if (deletedAsins.has(item.asin)) return false
+      if (isPartOrAccessory(item.title)) return false
+      return true
+    })
+    
+    setTotalCount(filtered.length)
+    
+    // Paginate the filtered results
+    const from = currentPage * PAGE_SIZE
+    const to = from + PAGE_SIZE
+    setAppliances(filtered.slice(from, to))
+    
     setIsLoading(false)
   }, [selectedCategory, currentPage])
 
