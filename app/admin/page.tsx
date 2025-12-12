@@ -726,7 +726,7 @@ function AdminDashboard() {
               {discovering || fetchingDetails ? <><Loader2 className="w-4 h-4 animate-spin" />{fetchingDetails ? 'Fetching...' : 'Discovering...'}</> : <><Search className="w-4 h-4" />Discover New</>}
             </button>
             <button onClick={handleRefreshPrices} disabled={refreshingPrices} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
-              {refreshingPrices ? <><Loader2 className="w-4 h-4 animate-spin" />Refreshing...</> : <><RefreshCw className="w-4 h-4" />Refresh Prices</>}
+              {refreshingPrices ? <><Loader2 className="w-4 h-4 animate-spin" />Fetching Details...</> : <><RefreshCw className="w-4 h-4" />Refresh All Details</>}
             </button>
           </div>
           
