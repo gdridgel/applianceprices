@@ -61,6 +61,7 @@ export interface KeepaProduct {
   reviewCount: number | null
   imageUrl: string | null
   imageUrls: string[]
+  videoUrls: string[]
   productUrl: string
   category: string
   // Dimensions in inches (parsed from size field)
@@ -300,6 +301,19 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       })
     }
 
+    // Get videos - parse from videos array if available
+    const videoUrls: string[] = []
+    if (item.videos && Array.isArray(item.videos)) {
+      item.videos.forEach((video: any) => {
+        if (video.url) {
+          videoUrls.push(video.url)
+        } else if (video.videoId) {
+          // Construct Amazon video URL if only ID provided
+          videoUrls.push(`https://www.amazon.com/vdp/v/${video.videoId}`)
+        }
+      })
+    }
+
     // Parse dimensions from size field (e.g., "18.7''*17.4''*33.1''(W*D*H)")
     const dimensions = parseSizeDimensions(item.size)
     
@@ -325,6 +339,7 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       reviewCount: item.numberOfReviews || item.reviewCount || null,
       imageUrl: imageUrls[0] || null,
       imageUrls,
+      videoUrls,
       productUrl: `https://www.amazon.com/dp/${item.asin}`,
       category,
       widthIn: dimensions.width,
@@ -414,8 +429,9 @@ export async function getProductsByAsins(asins: string[], category: string): Pro
     const batch = asins.slice(i, i + batchSize)
     const asinString = batch.join(',')
 
-    // Request with stats and rating for full details
-    const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=180&rating=1`
+    // Request with stats, rating, and videos for full details
+    // videos=1 includes video metadata at no extra token cost
+    const url = `https://api.keepa.com/product?key=${KEEPA_API_KEY}&domain=1&asin=${asinString}&stats=180&rating=1&videos=1`
 
     console.log(`Fetching details for ${batch.length} ASINs...`)
     const response = await fetch(url)

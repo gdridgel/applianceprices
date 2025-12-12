@@ -64,6 +64,7 @@ function buildRecord(product: KeepaProduct) {
     review_count: product.reviewCount,
     image_url: product.imageUrl,
     image_urls: product.imageUrls,
+    video_urls: product.videoUrls,
     product_url: product.productUrl,
     // Dimensions
     width_in: product.widthIn,
@@ -83,7 +84,7 @@ function buildRecord(product: KeepaProduct) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, category, asins } = body
+    const { action, category, asins, categoryId } = body
 
     if (action === 'test') {
       // Test endpoint - fetch one product and return parsed data
@@ -93,6 +94,134 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Test completed',
         product: products[0] || null
+      })
+    }
+
+    if (action === 'category-lookup') {
+      // Look up category info and subcategories
+      // Token cost: 1 per request (can batch up to 10 category IDs)
+      const catId = categoryId || '0' // 0 returns all root categories
+      const url = `https://api.keepa.com/category?key=${process.env.KEEPA_API_KEY}&domain=1&category=${catId}&parents=1`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
+      }
+      
+      return NextResponse.json({
+        success: true,
+        categories: data.categories,
+        categoryParents: data.categoryParents
+      })
+    }
+
+    if (action === 'category-search') {
+      // Search for categories by name
+      // Token cost: 1 per search (returns up to 50 matching categories)
+      const { searchTerm } = body
+      if (!searchTerm || searchTerm.length < 3) {
+        return NextResponse.json({ success: false, error: 'Search term must be at least 3 characters' })
+      }
+      
+      const encodedTerm = encodeURIComponent(searchTerm)
+      const url = `https://api.keepa.com/search?key=${process.env.KEEPA_API_KEY}&domain=1&type=category&term=${encodedTerm}`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
+      }
+      
+      // Format categories for easier reading
+      const categories = data.categories ? Object.entries(data.categories).map(([id, cat]: [string, any]) => ({
+        id,
+        name: cat.name,
+        contextFreeName: cat.contextFreeName,
+        children: cat.children?.length || 0,
+        productCount: cat.productCount
+      })) : []
+      
+      return NextResponse.json({
+        success: true,
+        searchTerm,
+        count: categories.length,
+        categories
+      })
+    }
+
+    if (action === 'browse-deals') {
+      // Browse deals - find products with recent price drops
+      // Token cost: 5 per request (up to 150 deals)
+      const { 
+        categoryIds,      // Array of category IDs to include
+        minDiscount = 20, // Minimum discount percentage
+        maxPrice = 500000, // Max price in cents ($5000)
+        minPrice = 5000,  // Min price in cents ($50)
+        minRating = -1,   // Min rating (0-50, -1 = disabled)
+        dateRange = 1,    // 0=day, 1=week, 2=month, 3=3months
+        page = 0
+      } = body
+      
+      const queryJSON = {
+        page,
+        domainId: 1, // Amazon.com
+        includeCategories: categoryIds || [],
+        priceTypes: [0], // Amazon price
+        deltaPercentRange: [minDiscount, 100],
+        currentRange: [minPrice, maxPrice],
+        salesRankRange: [0, 100000], // Top 100k sellers
+        minRating,
+        isRangeEnabled: true,
+        isFilterEnabled: categoryIds && categoryIds.length > 0,
+        filterErotic: true,
+        hasReviews: true,
+        singleVariation: true,
+        sortType: 4, // Sort by percentage delta (biggest discounts first)
+        dateRange
+      }
+      
+      const url = `https://api.keepa.com/deal?key=${process.env.KEEPA_API_KEY}`
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryJSON)
+      })
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
+      }
+      
+      // Format deals for easier use
+      const deals = data.deals?.dr?.map((deal: any) => ({
+        asin: deal.asin,
+        title: deal.title,
+        currentPrice: deal.current ? deal.current[0] / 100 : null,
+        previousPrice: deal.avg ? deal.avg[0] / 100 : null,
+        dropPercent: deal.deltaPercent ? deal.deltaPercent[0] : null,
+        dropAmount: deal.delta ? deal.delta[0] / 100 : null,
+        salesRank: deal.salesRank,
+        rating: deal.rating ? deal.rating / 10 : null,
+        reviewCount: deal.reviewCount,
+        categoryId: deal.categoryId,
+        image: deal.image ? `https://images-na.ssl-images-amazon.com/images/I/${deal.image}` : null
+      })) || []
+      
+      return NextResponse.json({
+        success: true,
+        page,
+        count: deals.length,
+        hasMore: deals.length === 150,
+        categoryBreakdown: {
+          ids: data.deals?.categoryIds || [],
+          names: data.deals?.categoryNames || [],
+          counts: data.deals?.categoryCount || []
+        },
+        deals
       })
     }
 
