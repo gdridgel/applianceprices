@@ -125,9 +125,18 @@ export default function Home() {
     fetchAppliances()
   }, [selectedCategory])
 
+  // Priority brands to show at top (in alphabetical order)
+  const PRIORITY_BRANDS = ['GE', 'Kenmore', 'LG', 'Maytag', 'Samsung', 'Whirlpool']
+
   const brands = useMemo(() => {
     const brandSet = new Set(appliances.map(a => a.brand).filter(Boolean))
-    return Array.from(brandSet).sort()
+    const allBrands = Array.from(brandSet).sort()
+    
+    // Separate priority brands from others
+    const priorityBrands = PRIORITY_BRANDS.filter(b => brandSet.has(b))
+    const otherBrands = allBrands.filter(b => !PRIORITY_BRANDS.includes(b))
+    
+    return [...priorityBrands, ...otherBrands]
   }, [appliances])
 
   const colors = useMemo(() => {
