@@ -189,7 +189,7 @@ export default function Home() {
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
       <header className="border-b border-slate-700 bg-black">
-        <div className="px-4 py-4">
+        <div className="px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-slate-900 rounded-lg">
               <Zap className="w-5 h-5 text-white" />
@@ -198,6 +198,14 @@ export default function Home() {
               <h1 className="text-xl font-bold text-white">appliance-prices.com</h1>
               <p className="text-xs text-slate-400">Compare prices across all major appliances</p>
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/deals" className="flex items-center gap-1 text-green-400 hover:text-green-300 text-sm font-medium">
+              🔥 Deals
+            </Link>
+            <Link href="/admin" className="text-slate-400 hover:text-slate-300 text-sm">
+              Admin
+            </Link>
           </div>
         </div>
       </header>
@@ -372,7 +380,7 @@ export default function Home() {
                                 <ProductImage 
                                   src={item.image_url} 
                                   alt={item.title || `${item.brand} ${item.model}`}
-                                  link={`/product/${item.id}`}
+                                  link={`/product/${item.asin}`}
                                 />
                               </td>
                             )
