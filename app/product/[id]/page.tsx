@@ -176,7 +176,10 @@ export default function ProductPage() {
         {/* Header */}
         <header className="border-b border-slate-700 bg-black">
           <div className="px-4 py-4">
-            <Link href="/" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
+            <Link 
+              href={product.category === 'Refrigerators' ? '/' : `/?category=${encodeURIComponent(product.category)}`} 
+              className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+            >
               <ArrowLeft className="w-4 h-4" />
               Back to {product.category}
             </Link>
