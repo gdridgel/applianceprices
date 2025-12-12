@@ -198,10 +198,11 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-slate-700 bg-black">
         <div className="px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex flex-col">
             <span className="text-xl font-bold">
               <span className="text-blue-400">Appliance</span> Prices
             </span>
+            <span className="text-xs text-slate-400">Compare Hundreds of Appliances</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/deals" className="flex items-center gap-1 text-green-400 hover:text-green-300 text-sm font-medium">
@@ -230,7 +231,7 @@ export default function Home() {
           {/* Sidebar */}
           <div className={`
             fixed md:relative inset-y-0 left-0 z-50 
-            w-64 md:w-48 
+            w-72 md:w-56 
             bg-black md:bg-transparent
             transform transition-transform duration-300 ease-in-out
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -245,86 +246,103 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Category dropdown */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-slate-400 mb-1 block">Category</label>
-              <select 
-                value={selectedCategory} 
-                onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white"
-              >
+            {/* Category filter - expanded */}
+            <div className="mb-5">
+              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Category</label>
+              <div className="space-y-1">
                 {allCategories.map(cat => (
-                  <option key={cat} value={cat}>
+                  <button
+                    key={cat}
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`w-full text-left px-2 py-1.5 rounded text-sm transition ${
+                      selectedCategory === cat
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
                     {categoryConfig[cat].title}
-                  </option>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
-            {/* Type filter */}
+            {/* Type filter - expanded */}
             {config.types && config.types.length > 0 && (
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block">Type</label>
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Type</label>
                 <div className="space-y-1">
                   {config.types.map(type => (
-                    <label key={type} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-1 py-0.5 rounded">
+                    <label key={type} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
                         checked={filters.types.includes(type)}
                         onChange={() => toggleFilter('types', type)}
-                        className="rounded border-slate-500"
+                        className="rounded border-slate-500 bg-slate-700"
                       />
-                      <span className="text-slate-300">{type} ({typeCounts[type] || 0})</span>
+                      <span className="text-slate-300 flex-1">{type}</span>
+                      <span className="text-slate-500 text-xs">{typeCounts[type] || 0}</span>
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Brand filter */}
+            {/* Brand filter - expanded */}
             {brands.length > 0 && (
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block">Brand</label>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
                   {brands.map(brand => (
-                    <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-1 py-0.5 rounded">
+                    <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
                         checked={filters.brands.includes(brand)}
                         onChange={() => toggleFilter('brands', brand)}
-                        className="rounded border-slate-500"
+                        className="rounded border-slate-500 bg-slate-700"
                       />
-                      <span className="text-slate-300">{brand} ({brandCounts[brand] || 0})</span>
+                      <span className="text-slate-300 flex-1">{brand}</span>
+                      <span className="text-slate-500 text-xs">{brandCounts[brand] || 0}</span>
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Color filter */}
+            {/* Color filter - expanded */}
             {colors.length > 0 && (
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block">Color</label>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Color</label>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
                   {colors.map(color => (
-                    <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-1 py-0.5 rounded">
+                    <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
                         checked={filters.colors.includes(color)}
                         onChange={() => toggleFilter('colors', color)}
-                        className="rounded border-slate-500"
+                        className="rounded border-slate-500 bg-slate-700"
                       />
-                      <span className="text-slate-300">{color} ({colorCounts[color] || 0})</span>
+                      <span className="text-slate-300 flex-1">{color}</span>
+                      <span className="text-slate-500 text-xs">{colorCounts[color] || 0}</span>
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Clear filters button */}
+            {(filters.types.length > 0 || filters.brands.length > 0 || filters.colors.length > 0) && (
+              <button
+                onClick={() => setFilters({ types: [], brands: [], colors: [] })}
+                className="w-full text-sm text-red-400 hover:text-red-300 py-2 border border-red-400/30 rounded hover:bg-red-400/10 transition"
+              >
+                Clear All Filters
+              </button>
+            )}
+
             {/* Affiliate Disclosure */}
             <div className="mt-6 pt-4 border-t border-slate-700">
-              <p className="text-xs text-slate-400 leading-relaxed">
-                As an Amazon Associate we earn from qualifying purchases. Product prices and availability are accurate as of the date/time indicated and are subject to change.
+              <p className="text-xs text-slate-500 leading-relaxed">
+                As an Amazon Associate we earn from qualifying purchases.
               </p>
             </div>
           </div>
