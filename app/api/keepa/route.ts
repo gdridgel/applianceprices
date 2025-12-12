@@ -230,6 +230,8 @@ export async function POST(request: NextRequest) {
         dateRange
       }
       
+      console.log('Deals query:', JSON.stringify(queryJSON))
+      
       const url = `https://api.keepa.com/deal?key=${process.env.KEEPA_API_KEY}`
       
       const response = await fetch(url, {
@@ -239,12 +241,16 @@ export async function POST(request: NextRequest) {
       })
       const data = await response.json()
       
+      console.log('Deals response keys:', Object.keys(data))
+      console.log('Deals dr length:', data.dr?.length || 0)
+      
       if (data.error) {
+        console.error('Deals API error:', data.error)
         return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
       }
       
-      // Format deals for easier use
-      const deals = data.deals?.dr?.map((deal: any) => {
+      // Format deals for easier use - response is { dr: [...], categoryIds: [...], ... }
+      const deals = data.dr?.map((deal: any) => {
         // Handle different Keepa response formats
         const currentPrice = deal.current?.[0] > 0 ? deal.current[0] / 100 : null
         const avgPrice = deal.avg?.[0] > 0 ? deal.avg[0] / 100 : null
@@ -282,9 +288,9 @@ export async function POST(request: NextRequest) {
         count: deals.length,
         hasMore: deals.length === 150,
         categoryBreakdown: {
-          ids: data.deals?.categoryIds || [],
-          names: data.deals?.categoryNames || [],
-          counts: data.deals?.categoryCount || []
+          ids: data.categoryIds || [],
+          names: data.categoryNames || [],
+          counts: data.categoryCount || []
         },
         deals
       })
