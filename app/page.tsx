@@ -195,14 +195,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-black">
+      {/* Header - Sticky */}
+      <header className="border-b border-slate-700 bg-black sticky top-0 z-50">
         <div className="px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex flex-col">
-            <span className="text-xl font-bold">
+          <Link href="/" className="flex items-baseline gap-3">
+            <span className="text-2xl font-bold">
               <span className="text-blue-400">Appliance</span> Prices
             </span>
-            <span className="text-xs text-slate-400">Compare Hundreds of Appliances</span>
+            <span className="text-slate-400 text-sm hidden sm:block">Smart Shoppers Start Here</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/deals" className="flex items-center gap-1 text-green-400 hover:text-green-300 text-sm font-medium">
@@ -238,6 +238,7 @@ export default function Home() {
             md:flex-shrink-0
             overflow-y-auto
             p-4 md:p-0
+            md:top-20 md:sticky md:h-[calc(100vh-100px)]
           `}>
             {/* Close button for mobile */}
             <div className="md:hidden flex justify-end mb-4">
@@ -246,24 +247,20 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Category filter - expanded */}
+            {/* Category dropdown */}
             <div className="mb-5">
               <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Category</label>
-              <div className="space-y-1">
+              <select 
+                value={selectedCategory} 
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white"
+              >
                 {allCategories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategoryChange(cat)}
-                    className={`w-full text-left px-2 py-1.5 rounded text-sm transition ${
-                      selectedCategory === cat
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
+                  <option key={cat} value={cat}>
                     {categoryConfig[cat].title}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Type filter - expanded */}
@@ -279,8 +276,7 @@ export default function Home() {
                         onChange={() => toggleFilter('types', type)}
                         className="rounded border-slate-500 bg-slate-700"
                       />
-                      <span className="text-slate-300 flex-1">{type}</span>
-                      <span className="text-slate-500 text-xs">{typeCounts[type] || 0}</span>
+                      <span className="text-slate-300">{type} ({typeCounts[type] || 0})</span>
                     </label>
                   ))}
                 </div>
@@ -300,8 +296,7 @@ export default function Home() {
                         onChange={() => toggleFilter('brands', brand)}
                         className="rounded border-slate-500 bg-slate-700"
                       />
-                      <span className="text-slate-300 flex-1">{brand}</span>
-                      <span className="text-slate-500 text-xs">{brandCounts[brand] || 0}</span>
+                      <span className="text-slate-300">{brand} ({brandCounts[brand] || 0})</span>
                     </label>
                   ))}
                 </div>
@@ -321,8 +316,7 @@ export default function Home() {
                         onChange={() => toggleFilter('colors', color)}
                         className="rounded border-slate-500 bg-slate-700"
                       />
-                      <span className="text-slate-300 flex-1">{color}</span>
-                      <span className="text-slate-500 text-xs">{colorCounts[color] || 0}</span>
+                      <span className="text-slate-300">{color} ({colorCounts[color] || 0})</span>
                     </label>
                   ))}
                 </div>
