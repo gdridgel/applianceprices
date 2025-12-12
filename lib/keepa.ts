@@ -36,7 +36,7 @@ const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[
     searchTerms: ['ice maker']
   },
   'Window AC': {
-    categoryId: '1193678',
+    categoryId: '3737721',
     searchTerms: ['window air conditioner']
   },
   'Televisions': {
