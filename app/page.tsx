@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { categoryConfig, allCategories } from '@/lib/categoryConfig'
 import { Star, Filter, X } from 'lucide-react'
@@ -69,7 +70,14 @@ type Appliance = {
 }
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState('Refrigerators')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  
+  // Get category from URL or default to Refrigerators
+  const urlCategory = searchParams.get('category')
+  const initialCategory = urlCategory && allCategories.includes(urlCategory) ? urlCategory : 'Refrigerators'
+  
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [appliances, setAppliances] = useState<Appliance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -81,6 +89,24 @@ export default function Home() {
     brands: [] as string[],
     colors: [] as string[],
   })
+
+  // Sync URL with category changes
+  useEffect(() => {
+    if (urlCategory !== selectedCategory) {
+      const newUrl = selectedCategory === 'Refrigerators' 
+        ? '/' 
+        : `/?category=${encodeURIComponent(selectedCategory)}`
+      router.replace(newUrl, { scroll: false })
+    }
+  }, [selectedCategory, urlCategory, router])
+
+  // Update category if URL changes (browser back/forward)
+  useEffect(() => {
+    if (urlCategory && allCategories.includes(urlCategory) && urlCategory !== selectedCategory) {
+      setSelectedCategory(urlCategory)
+      setFilters({ types: [], brands: [], colors: [] })
+    }
+  }, [urlCategory])
 
   // Fetch appliances from Supabase
   useEffect(() => {
@@ -195,6 +221,7 @@ export default function Home() {
   const handleCategoryChange = (cat: string) => {
     setSelectedCategory(cat)
     setFilters({ types: [], brands: [], colors: [] })
+    // URL will be updated by the useEffect
   }
 
   const getDiscount = (item: Appliance) => {
@@ -438,8 +465,8 @@ export default function Home() {
                           }
                           if (col.type === 'boolean') {
                             return (
-                              <td key={col.key} className="text-slate-300 px-2 py-1">
-                                {item[col.key] ? '✓' : '—'}
+                              <td key={col.key} className="text-slate-300 px-2 py-1 text-center">
+                                {item[col.key] ? <span className="text-yellow-400">★</span> : '—'}
                               </td>
                             )
                           }
