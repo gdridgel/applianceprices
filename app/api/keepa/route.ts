@@ -1,297 +1,726 @@
-'use client'
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { discoverAsins, getProductsByAsins, queryProducts, CATEGORY_CONFIG, KeepaProduct } from '@/lib/keepa'
 
-import React, { useState, useEffect } from 'react'
-import { TrendingDown, Percent, Star, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
-import Link from 'next/link'
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
-const AFFILIATE_TAG = 'appliances04d-20'
-
-// Categories list
-const CATEGORIES = [
-  'All Categories',
-  'Refrigerators',
-  'Freezers',
-  'Dishwashers',
-  'Ranges',
-  'Washers',
-  'Dryers',
-  'Air Fryers',
-  'Ice Makers',
-  'Window AC',
-  'Televisions'
+// Words that indicate a product is a part/accessory, not a full appliance
+const PARTS_FILTER_WORDS = [
+  'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
+  'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
+  'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
+  'switch', 'circuit', 'board', 'gasket', 'motherboard', 'timer', 'seal',
+  'compressor', 'fan motor', 'door handle', 'shelf', 'drawer', 'bin',
+  'ice tray', 'water line', 'defrost', 'relay', 'start device',
+  'kegerator', 'keg cooler', 'beer dispenser', 'beverage cooler'
 ]
 
-type Deal = {
-  id: string
-  asin: string
-  title: string
-  brand: string
-  price: number
-  list_price: number
-  discount: number
-  savings: number
-  rating: number | null
-  review_count: number | null
-  image_url: string | null
-  category: string
-  type: string | null
+const MINIMUM_PRICE = 50.00
+
+// Check if a product title indicates it's a part/accessory
+function isPartOrAccessory(title: string): boolean {
+  if (!title) return false
+  const lowerTitle = title.toLowerCase()
+  return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
 }
 
-// Image component with hover zoom
-function ProductImage({ src, alt, asin }: { src: string | null, alt: string, asin: string }) {
-  const [isHovered, setIsHovered] = useState(false)
-  const imageUrl = src || `https://images-na.ssl-images-amazon.com/images/P/${asin}.jpg`
-  
-  return (
-    <div 
-      className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <a href={`https://www.amazon.com/dp/${asin}?tag=${AFFILIATE_TAG}`} target="_blank" rel="noopener noreferrer">
-        <img 
-          src={imageUrl} 
-          alt={alt}
-          className="w-24 h-24 object-contain cursor-pointer bg-white rounded"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="%23374151" width="80" height="80"/><text fill="%239CA3AF" x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="10">No Image</text></svg>'
-          }}
-        />
-      </a>
-      {isHovered && (
-        <div className="fixed z-[9999] bg-white p-2 rounded-lg shadow-2xl border border-slate-600" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <img src={imageUrl} alt={alt} className="w-64 h-64 object-contain" />
-        </div>
-      )}
-    </div>
-  )
+// Filter products to remove parts and low-priced items
+function filterValidProducts(products: KeepaProduct[]): KeepaProduct[] {
+  return products.filter(product => {
+    // Filter out parts/accessories
+    if (isPartOrAccessory(product.title)) {
+      console.log(`Filtered out part: ${product.title.substring(0, 50)}...`)
+      return false
+    }
+    // Filter out items below minimum price
+    if (product.price !== null && product.price < MINIMUM_PRICE) {
+      console.log(`Filtered out low price ($${product.price}): ${product.title.substring(0, 50)}...`)
+      return false
+    }
+    return true
+  })
 }
 
-export default function DealsPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>('All Categories')
-  const [minDiscount, setMinDiscount] = useState(10)
-  const [deals, setDeals] = useState<Deal[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+// Helper to get deleted ASINs that should be skipped
+async function getDeletedAsins(): Promise<Set<string>> {
+  const { data } = await supabase.from('deleted_asins').select('asin')
+  return new Set(data?.map(d => d.asin) || [])
+}
 
-  const fetchDeals = async () => {
-    setIsLoading(true)
-    setError(null)
-    
-    try {
-      const response = await fetch('/api/keepa', {
+// Build full record from product with all fields
+function buildRecord(product: KeepaProduct) {
+  return {
+    category: product.category,
+    asin: product.asin,
+    title: product.title,
+    brand: product.brand,
+    model: product.model,
+    color: product.color,
+    price: product.price,
+    list_price: product.listPrice,
+    rating: product.rating,
+    review_count: product.reviewCount,
+    image_url: product.imageUrl,
+    image_urls: product.imageUrls,
+    video_urls: product.videoUrls,
+    product_url: product.productUrl,
+    // Dimensions
+    width_in: product.widthIn,
+    depth_in: product.depthIn,
+    height_in: product.heightIn,
+    weight_lbs: product.weightLbs,
+    // Specs
+    screen_size: product.screenSize,
+    capacity_cu_ft: product.capacityCuFt,
+    btu: product.btu,
+    energy_star: product.energyStar,
+    ice_maker: product.iceMaker,
+    water_dispenser: product.waterDispenser,
+    type: product.type,
+    updated_at: new Date().toISOString()
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { action, category, asins, categoryId } = body
+
+    if (action === 'test-deals') {
+      // Test the deals API directly with minimal query
+      const queryJSON = {
+        page: 0,
+        domainId: 1,
+        priceTypes: [0],
+        deltaPercentRange: [20, 100],
+        currentRange: [5000, 500000],
+        isRangeEnabled: true,
+        isFilterEnabled: false,
+        hasReviews: true,
+        singleVariation: true,
+        sortType: 4,
+        dateRange: 1
+      }
+      
+      const url = `https://api.keepa.com/deal?key=${process.env.KEEPA_API_KEY}`
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'database-deals',
-          category: selectedCategory === 'All Categories' ? 'all' : selectedCategory,
-          minDiscount,
-          limit: 200
-        })
+        body: JSON.stringify(queryJSON)
       })
-
       const data = await response.json()
       
-      if (data.success) {
-        setDeals(data.deals || [])
-        setLastUpdated(new Date())
-      } else {
-        setError(data.error || 'Failed to fetch deals')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch deals')
-    } finally {
-      setIsLoading(false)
+      return NextResponse.json({
+        success: !data.error,
+        query: queryJSON,
+        responseKeys: Object.keys(data),
+        error: data.error || null,
+        dealsCount: data.dr?.length || 0,
+        firstDeal: data.dr?.[0] || null,
+        categoryIds: data.categoryIds?.slice(0, 5) || [],
+        categoryNames: data.categoryNames?.slice(0, 5) || [],
+        rawResponse: data.error ? data : undefined
+      })
     }
+
+    if (action === 'test') {
+      // Test endpoint - fetch one product and return parsed data + raw fields
+      const testAsin = body.asin || 'B0B9M9Z1FQ' // Default to a refrigerator
+      const url = `https://api.keepa.com/product?key=${process.env.KEEPA_API_KEY}&domain=1&asin=${testAsin}&stats=180&rating=1&videos=1`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message })
+      }
+      
+      const rawProduct = data.products?.[0]
+      
+      // Show available dimension/spec fields from Keepa
+      const dimensionFields = {
+        // Direct dimension fields
+        packageHeight: rawProduct?.packageHeight,
+        packageLength: rawProduct?.packageLength, 
+        packageWidth: rawProduct?.packageWidth,
+        packageWeight: rawProduct?.packageWeight,
+        itemHeight: rawProduct?.itemHeight,
+        itemLength: rawProduct?.itemLength,
+        itemWidth: rawProduct?.itemWidth,
+        itemWeight: rawProduct?.itemWeight,
+        // Size field (often contains formatted dimensions)
+        size: rawProduct?.size,
+        // Features that might contain specs
+        features: rawProduct?.features,
+        // Technical details
+        technicalDetails: rawProduct?.technicalDetails,
+        // Other spec fields
+        displaySize: rawProduct?.displaySize,
+        screenSize: rawProduct?.screenSize,
+        resolution: rawProduct?.resolution,
+        capacity: rawProduct?.capacity,
+        wattage: rawProduct?.wattage,
+        voltage: rawProduct?.voltage,
+        material: rawProduct?.material,
+        includedComponents: rawProduct?.includedComponents,
+        partNumber: rawProduct?.partNumber,
+        modelNumber: rawProduct?.model,
+      }
+      
+      const products = await getProductsByAsins([testAsin], 'Refrigerators')
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Test completed',
+        parsedProduct: products[0] || null,
+        rawDimensionFields: dimensionFields,
+        allRawFields: Object.keys(rawProduct || {})
+      })
+    }
+
+    if (action === 'category-lookup') {
+      // Look up category info and subcategories
+      // Token cost: 1 per request (can batch up to 10 category IDs)
+      const catId = categoryId || '0' // 0 returns all root categories
+      const url = `https://api.keepa.com/category?key=${process.env.KEEPA_API_KEY}&domain=1&category=${catId}&parents=1`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
+      }
+      
+      return NextResponse.json({
+        success: true,
+        categories: data.categories,
+        categoryParents: data.categoryParents
+      })
+    }
+
+    if (action === 'category-search') {
+      // Search for categories by name
+      // Token cost: 1 per search (returns up to 50 matching categories)
+      const { searchTerm } = body
+      if (!searchTerm || searchTerm.length < 3) {
+        return NextResponse.json({ success: false, error: 'Search term must be at least 3 characters' })
+      }
+      
+      const encodedTerm = encodeURIComponent(searchTerm)
+      const url = `https://api.keepa.com/search?key=${process.env.KEEPA_API_KEY}&domain=1&type=category&term=${encodedTerm}`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
+      }
+      
+      // Format categories for easier reading
+      const categories = data.categories ? Object.entries(data.categories).map(([id, cat]: [string, any]) => ({
+        id,
+        name: cat.name,
+        contextFreeName: cat.contextFreeName,
+        children: cat.children?.length || 0,
+        productCount: cat.productCount
+      })) : []
+      
+      return NextResponse.json({
+        success: true,
+        searchTerm,
+        count: categories.length,
+        categories
+      })
+    }
+
+    if (action === 'database-deals') {
+      // Get deals from our own database - products where price < list_price
+      const { 
+        category,
+        minDiscount = 10,
+        limit = 100
+      } = body
+      
+      let query = supabase
+        .from('appliances')
+        .select('*')
+        .not('price', 'is', null)
+        .not('list_price', 'is', null)
+        .gt('list_price', 0)
+        .order('updated_at', { ascending: false })
+        .limit(limit)
+      
+      if (category && category !== 'all') {
+        query = query.eq('category', category)
+      }
+      
+      const { data: products, error } = await query
+      
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message })
+      }
+      
+      // Calculate deals - products where list_price > price
+      const deals = (products || [])
+        .map(p => {
+          const discount = p.list_price && p.price && p.list_price > p.price
+            ? Math.round((1 - p.price / p.list_price) * 100)
+            : 0
+          return {
+            ...p,
+            discount,
+            savings: p.list_price && p.price ? (p.list_price - p.price).toFixed(2) : 0
+          }
+        })
+        .filter(p => p.discount >= minDiscount)
+        .sort((a, b) => b.discount - a.discount)
+      
+      return NextResponse.json({
+        success: true,
+        count: deals.length,
+        deals
+      })
+    }
+
+    if (action === 'browse-deals') {
+      // Browse deals - find products with recent price drops
+      // Token cost: 5 per request (up to 150 deals)
+      const { 
+        categoryIds,      // Array of category IDs to include
+        minDiscount = 20, // Minimum discount percentage
+        maxDiscount = 80, // Maximum discount percentage
+        maxPrice = 40000, // Max price in cents ($400)
+        minPrice = 500,   // Min price in cents ($5)
+        minRating = -1,   // Min rating (0-50, -1 = disabled)
+        dateRange = 1,    // 0=day, 1=week, 2=month, 3=3months
+        page = 0
+      } = body
+      
+      // Match exact Keepa format from their website
+      const queryJSON: any = {
+        page,
+        domainId: "1", // Amazon.com - string not number!
+        excludeCategories: [],
+        includeCategories: categoryIds || [],
+        priceTypes: [0], // Amazon price
+        deltaRange: [0, 10000],
+        deltaPercentRange: [minDiscount, maxDiscount],
+        salesRankRange: [-1, -1], // -1 means no filter
+        currentRange: [minPrice, maxPrice],
+        minRating,
+        isLowest: false,
+        isLowest90: false,
+        isLowestOffer: false,
+        isOutOfStock: false,
+        titleSearch: "",
+        isRangeEnabled: true,
+        isFilterEnabled: categoryIds && categoryIds.length > 0,
+        filterErotic: true,
+        singleVariation: true,
+        hasReviews: false,
+        isPrimeExclusive: false,
+        mustHaveAmazonOffer: false,
+        mustNotHaveAmazonOffer: false,
+        sortType: 4, // Sort by percentage delta
+        dateRange,
+        warehouseConditions: [1, 2, 3, 4, 5]
+      }
+      
+      console.log('Deals query:', JSON.stringify(queryJSON))
+      
+      const url = `https://api.keepa.com/deal?key=${process.env.KEEPA_API_KEY}`
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryJSON)
+      })
+      const data = await response.json()
+      
+      console.log('Deals response keys:', Object.keys(data))
+      console.log('Deals dr length:', data.dr?.length || 0)
+      
+      if (data.error) {
+        console.error('Deals API error:', data.error)
+        return NextResponse.json({ success: false, error: data.error.message || JSON.stringify(data.error) })
+      }
+      
+      // Format deals for easier use - response is { dr: [...], categoryIds: [...], ... }
+      const deals = data.dr?.map((deal: any) => {
+        // Handle different Keepa response formats
+        const currentPrice = deal.current?.[0] > 0 ? deal.current[0] / 100 : null
+        const avgPrice = deal.avg?.[0] > 0 ? deal.avg[0] / 100 : null
+        const dropPercent = deal.deltaPercent?.[0]
+        const dropAmount = deal.delta?.[0] ? Math.abs(deal.delta[0]) / 100 : null
+        
+        // Build image URL - Keepa sometimes returns just the image ID
+        let imageUrl = null
+        if (deal.image) {
+          if (deal.image.startsWith('http')) {
+            imageUrl = deal.image
+          } else {
+            imageUrl = `https://images-na.ssl-images-amazon.com/images/I/${deal.image}`
+          }
+        }
+        
+        return {
+          asin: deal.asin,
+          title: deal.title,
+          currentPrice,
+          previousPrice: avgPrice,
+          dropPercent: typeof dropPercent === 'number' && !isNaN(dropPercent) ? dropPercent : null,
+          dropAmount,
+          salesRank: deal.salesRank,
+          rating: deal.rating ? deal.rating / 10 : null,
+          reviewCount: deal.reviewCount,
+          categoryId: deal.categoryId,
+          image: imageUrl
+        }
+      }) || []
+      
+      return NextResponse.json({
+        success: true,
+        page,
+        count: deals.length,
+        hasMore: deals.length === 150,
+        categoryBreakdown: {
+          ids: data.categoryIds || [],
+          names: data.categoryNames || [],
+          counts: data.categoryCount || []
+        },
+        deals
+      })
+    }
+
+    if (action === 'discover') {
+      // Discover new ASINs for a category using Product Finder
+      // Continues from last page fetched
+      if (!category || !CATEGORY_CONFIG[category]) {
+        return NextResponse.json({ error: 'Invalid category' }, { status: 400 })
+      }
+
+      // Get the last page we fetched for this category
+      const { data: progressData } = await supabase
+        .from('sync_progress')
+        .select('last_page, total_discovered')
+        .eq('category', category)
+        .single()
+      
+      const startPage = progressData?.last_page || 0
+      const previousTotal = progressData?.total_discovered || 0
+      
+      // Fetch 1 page (1000 products per page)
+      const pagesToFetch = 1
+      const deletedAsins = await getDeletedAsins()
+      
+      // Get existing ASINs
+      const { data: existing } = await supabase
+        .from('appliances')
+        .select('asin')
+        .eq('category', category)
+      
+      const existingAsins = new Set(existing?.map(e => e.asin) || [])
+      
+      let allFoundAsins: string[] = []
+      let lastPageWithResults = startPage
+      let noMoreResults = false
+      
+      for (let page = startPage; page < startPage + pagesToFetch; page++) {
+        try {
+          console.log(`Fetching ${category} page ${page}...`)
+          const result = await queryProducts(category, page)
+          
+          if (result.asins.length === 0) {
+            console.log(`No more results for ${category} at page ${page}`)
+            noMoreResults = true
+            break
+          }
+          
+          allFoundAsins.push(...result.asins)
+          lastPageWithResults = page + 1 // Next page to fetch
+          
+          // Rate limiting
+          await new Promise(resolve => setTimeout(resolve, 300))
+        } catch (error) {
+          console.error(`Error fetching page ${page}:`, error)
+          break
+        }
+      }
+      
+      // Filter out existing and deleted ASINs
+      const newAsins = allFoundAsins.filter(asin => !existingAsins.has(asin) && !deletedAsins.has(asin))
+      
+      // Update progress tracker
+      await supabase
+        .from('sync_progress')
+        .upsert({
+          category,
+          last_page: noMoreResults ? 0 : lastPageWithResults, // Reset to 0 if we've reached the end
+          total_discovered: previousTotal + newAsins.length,
+          last_sync_at: new Date().toISOString()
+        }, { onConflict: 'category' })
+
+      return NextResponse.json({
+        success: true,
+        category,
+        pagesScanned: `${startPage} to ${lastPageWithResults - 1}`,
+        nextPage: noMoreResults ? 'Complete - will restart from 0' : lastPageWithResults,
+        totalFound: allFoundAsins.length,
+        newAsins: newAsins.length,
+        skippedExisting: allFoundAsins.filter(a => existingAsins.has(a)).length,
+        skippedDeleted: allFoundAsins.filter(a => deletedAsins.has(a)).length,
+        asins: newAsins
+      })
+    }
+
+    if (action === 'fetch-details') {
+      // Fetch details for ASINs and save to database
+      if (!category || !asins || asins.length === 0) {
+        return NextResponse.json({ error: 'Category and ASINs required' }, { status: 400 })
+      }
+
+      const deletedAsins = await getDeletedAsins()
+      const filteredAsins = asins.filter((asin: string) => !deletedAsins.has(asin))
+
+      const rawProducts = await getProductsByAsins(filteredAsins, category)
+      
+      // Filter out parts/accessories and low-priced items
+      const products = filterValidProducts(rawProducts)
+      
+      let created = 0
+      let updated = 0
+      let errors = 0
+      let filteredOut = rawProducts.length - products.length
+
+      for (const product of products) {
+        const record = buildRecord(product)
+
+        // Check if exists
+        const { data: existing } = await supabase
+          .from('appliances')
+          .select('id')
+          .eq('asin', product.asin)
+          .single()
+
+        if (existing) {
+          const { error } = await supabase
+            .from('appliances')
+            .update(record)
+            .eq('id', existing.id)
+          
+          if (error) {
+            console.error('Update error:', error)
+            errors++
+          } else {
+            updated++
+          }
+        } else {
+          const { error } = await supabase
+            .from('appliances')
+            .insert([record])
+          
+          if (error) {
+            console.error('Insert error:', error)
+            errors++
+          } else {
+            created++
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        category,
+        created,
+        updated,
+        errors,
+        filteredOut
+      })
+    }
+
+    if (action === 'refresh-prices') {
+      // Refresh prices and ALL fields for existing products
+      if (!category) {
+        return NextResponse.json({ error: 'Category required' }, { status: 400 })
+      }
+
+      // Get all ASINs for this category
+      const { data: products } = await supabase
+        .from('appliances')
+        .select('asin')
+        .eq('category', category)
+      
+      if (!products || products.length === 0) {
+        return NextResponse.json({
+          success: true,
+          category,
+          message: 'No products to refresh'
+        })
+      }
+
+      const asinList = products.map(p => p.asin).filter(Boolean)
+      const updatedProducts = await getProductsByAsins(asinList, category)
+      
+      let updated = 0
+      let errors = 0
+
+      for (const product of updatedProducts) {
+        const { error } = await supabase
+          .from('appliances')
+          .update({
+            price: product.price,
+            list_price: product.listPrice,
+            rating: product.rating,
+            review_count: product.reviewCount,
+            brand: product.brand,
+            model: product.model,
+            color: product.color,
+            width_in: product.widthIn,
+            depth_in: product.depthIn,
+            height_in: product.heightIn,
+            weight_lbs: product.weightLbs,
+            capacity_cu_ft: product.capacityCuFt,
+            energy_star: product.energyStar,
+            ice_maker: product.iceMaker,
+            water_dispenser: product.waterDispenser,
+            type: product.type,
+            updated_at: new Date().toISOString()
+          })
+          .eq('asin', product.asin)
+        
+        if (error) {
+          console.error('Update error:', error)
+          errors++
+        } else {
+          updated++
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        category,
+        updated,
+        errors
+      })
+    }
+
+    if (action === 'full-sync') {
+      // Full sync: discover + fetch details for all categories
+      const results: any[] = []
+      const categories = Object.keys(CATEGORY_CONFIG)
+      const deletedAsins = await getDeletedAsins()
+
+      for (const cat of categories) {
+        try {
+          // Discover new ASINs using Product Finder
+          const foundAsins = await discoverAsins(cat)
+          
+          // Get existing ASINs
+          const { data: existing } = await supabase
+            .from('appliances')
+            .select('asin')
+            .eq('category', cat)
+          
+          const existingAsins = new Set(existing?.map(e => e.asin) || [])
+          const newAsins = foundAsins.filter(asin => !existingAsins.has(asin) && !deletedAsins.has(asin))
+          
+          // Fetch details for new ASINs
+          let created = 0
+          let errors = 0
+
+          if (newAsins.length > 0) {
+            const products = await getProductsByAsins(newAsins, cat)
+            
+            for (const product of products) {
+              const { error } = await supabase
+                .from('appliances')
+                .insert([buildRecord(product)])
+              
+              if (error) {
+                console.error('Insert error:', error)
+                errors++
+              } else {
+                created++
+              }
+            }
+          }
+
+          // Refresh existing products with all fields
+          const existingAsinsList = Array.from(existingAsins)
+          let updated = 0
+
+          if (existingAsinsList.length > 0) {
+            const updatedProducts = await getProductsByAsins(existingAsinsList, cat)
+            
+            for (const product of updatedProducts) {
+              const { error } = await supabase
+                .from('appliances')
+                .update({
+                  price: product.price,
+                  list_price: product.listPrice,
+                  rating: product.rating,
+                  review_count: product.reviewCount,
+                  brand: product.brand,
+                  model: product.model,
+                  color: product.color,
+                  width_in: product.widthIn,
+                  depth_in: product.depthIn,
+                  height_in: product.heightIn,
+                  weight_lbs: product.weightLbs,
+                  capacity_cu_ft: product.capacityCuFt,
+                  energy_star: product.energyStar,
+                  ice_maker: product.iceMaker,
+                  water_dispenser: product.waterDispenser,
+                  type: product.type,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('asin', product.asin)
+              
+              if (error) {
+                console.error('Update error:', error)
+                errors++
+              } else {
+                updated++
+              }
+            }
+          }
+
+          results.push({
+            category: cat,
+            discovered: foundAsins.length,
+            newAsins: newAsins.length,
+            created,
+            updated,
+            errors
+          })
+
+          // Delay between categories
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        } catch (error) {
+          results.push({
+            category: cat,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        results
+      })
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+
+  } catch (error) {
+    console.error('Keepa sync error:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Sync failed' },
+      { status: 500 }
+    )
   }
-
-  useEffect(() => {
-    fetchDeals()
-  }, [selectedCategory, minDiscount])
-
-  return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-black sticky top-0 z-40">
-        <div className="px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-baseline gap-3">
-            <span className="text-2xl font-bold">
-              <span className="text-blue-400">Appliance</span> Prices
-            </span>
-            <span className="text-slate-400 text-sm hidden sm:block">Smart Shoppers Start Here</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-green-400">
-              <TrendingDown className="w-5 h-5" />
-              <span className="font-medium">Deals</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="px-4 py-6">
-        {/* Filters */}
-        <div className="bg-slate-900 rounded-lg border border-slate-700 p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Category Filter */}
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">Category</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm"
-              >
-                {CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Min Discount Filter */}
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">Min Discount</label>
-              <select
-                value={minDiscount}
-                onChange={(e) => setMinDiscount(parseInt(e.target.value))}
-                className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm"
-              >
-                <option value={5}>5%+</option>
-                <option value={10}>10%+</option>
-                <option value={15}>15%+</option>
-                <option value={20}>20%+</option>
-                <option value={25}>25%+</option>
-                <option value={30}>30%+</option>
-                <option value={40}>40%+</option>
-                <option value={50}>50%+</option>
-              </select>
-            </div>
-
-            {/* Refresh Button */}
-            <div className="flex items-end">
-              <button
-                onClick={fetchDeals}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Refresh
-              </button>
-            </div>
-
-            {/* Last Updated */}
-            {lastUpdated && (
-              <span className="text-xs text-slate-500 self-end pb-2">
-                Updated: {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Info Banner */}
-        <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4 mb-6">
-          <p className="text-green-300 text-sm">
-            💰 Showing products where the current price is below the list price. 
-            These are instant savings available right now on Amazon!
-          </p>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 mb-6 text-red-300">
-            {error}
-          </div>
-        )}
-
-        {/* Results Count */}
-        <div className="mb-4 text-slate-400 text-sm">
-          {isLoading ? 'Searching for deals...' : `Found ${deals.length} deals`}
-        </div>
-
-        {/* Deals Grid */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-          </div>
-        ) : deals.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            No deals found. Try lowering the minimum discount.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {deals.map((deal) => (
-              <a 
-                key={deal.id} 
-                href={`https://www.amazon.com/dp/${deal.asin}?tag=${AFFILIATE_TAG}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-green-500 transition block"
-              >
-                {/* Discount Badge */}
-                <div className="flex justify-between items-start mb-3">
-                  <span className="bg-green-600 text-white text-sm font-bold px-2 py-1 rounded">
-                    {deal.discount}% OFF
-                  </span>
-                  <span className="text-xs text-slate-500">{deal.category}</span>
-                </div>
-
-                {/* Image */}
-                <div className="flex justify-center mb-3">
-                  <ProductImage src={deal.image_url} alt={deal.title || ''} asin={deal.asin} />
-                </div>
-
-                {/* Brand & Title */}
-                <div className="mb-3">
-                  {deal.brand && (
-                    <p className="text-xs text-slate-500 uppercase">{deal.brand}</p>
-                  )}
-                  <h3 className="text-sm text-slate-200 line-clamp-2" title={deal.title}>
-                    {deal.title}
-                  </h3>
-                </div>
-
-                {/* Price */}
-                <div className="mb-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-bold text-green-400">
-                      ${deal.price?.toFixed(2)}
-                    </span>
-                    <span className="text-sm text-slate-500 line-through">
-                      ${deal.list_price?.toFixed(2)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-green-500">
-                    Save ${deal.savings}
-                  </p>
-                </div>
-
-                {/* Rating */}
-                {deal.rating && (
-                  <div className="flex items-center gap-1 text-xs text-slate-400">
-                    <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                    <span>{deal.rating}</span>
-                    {deal.review_count && (
-                      <span className="text-slate-500">({deal.review_count.toLocaleString()})</span>
-                    )}
-                  </div>
-                )}
-
-                {/* Type */}
-                {deal.type && (
-                  <p className="text-xs text-slate-500 mt-1">{deal.type}</p>
-                )}
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Affiliate Disclosure */}
-        <div className="mt-8 pt-4 border-t border-slate-800">
-          <p className="text-xs text-slate-500 text-center">
-            As an Amazon Associate we earn from qualifying purchases. Prices and availability subject to change.
-          </p>
-        </div>
-      </div>
-    </div>
-  )
 }
