@@ -5,6 +5,9 @@ import { allCategories } from '@/lib/categoryConfig'
 import { TrendingDown, Percent, Star, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
+// ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
+const AFFILIATE_TAG = 'appliances-04d-20'  // Example: 'mysite-20'
+
 // Category IDs for Keepa
 const CATEGORY_IDS: Record<string, number> = {
   'Refrigerators': 3741361,
@@ -32,9 +35,17 @@ type Deal = {
   image: string | null
 }
 
+// Build Amazon image URL from ASIN if no image provided
+function getImageUrl(image: string | null, asin: string): string {
+  if (image) return image
+  // Fallback to Amazon product image
+  return `https://images-na.ssl-images-amazon.com/images/P/${asin}.jpg`
+}
+
 // Image component with hover zoom
 function ProductImage({ src, alt, asin }: { src: string | null, alt: string, asin: string }) {
   const [isHovered, setIsHovered] = useState(false)
+  const imageUrl = getImageUrl(src, asin)
   
   return (
     <div 
@@ -42,20 +53,20 @@ function ProductImage({ src, alt, asin }: { src: string | null, alt: string, asi
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <a href={`https://www.amazon.com/dp/${asin}?tag=YOUR-AFFILIATE-TAG`} target="_blank" rel="noopener noreferrer">
-        {src ? (
-          <img 
-            src={src} 
-            alt={alt}
-            className="w-20 h-20 object-contain cursor-pointer bg-white rounded"
-          />
-        ) : (
-          <div className="w-20 h-20 bg-slate-700 rounded" />
-        )}
+      <a href={`https://www.amazon.com/dp/${asin}?tag=${AFFILIATE_TAG}`} target="_blank" rel="noopener noreferrer">
+        <img 
+          src={imageUrl} 
+          alt={alt}
+          className="w-20 h-20 object-contain cursor-pointer bg-white rounded"
+          onError={(e) => {
+            // If image fails, show placeholder
+            (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="%23374151" width="80" height="80"/><text fill="%239CA3AF" x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="10">No Image</text></svg>'
+          }}
+        />
       </a>
-      {isHovered && src && (
+      {isHovered && (
         <div className="fixed z-[9999] bg-white p-2 rounded-lg shadow-2xl border border-slate-600" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <img src={src} alt={alt} className="w-64 h-64 object-contain" />
+          <img src={imageUrl} alt={alt} className="w-64 h-64 object-contain" />
         </div>
       )}
     </div>
@@ -281,7 +292,7 @@ export default function DealsPage() {
 
                 {/* View on Amazon Button */}
                 <a
-                  href={`https://www.amazon.com/dp/${deal.asin}?tag=YOUR-AFFILIATE-TAG`}
+                  href={`https://www.amazon.com/dp/${deal.asin}?tag=${AFFILIATE_TAG}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 text-sm"
