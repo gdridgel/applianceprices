@@ -3,8 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { allCategories } from '@/lib/categoryConfig'
-import { Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle, RefreshCw, Search, Zap, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle, RefreshCw, Search, Zap, ChevronLeft, ChevronRight, Sparkles, Lock } from 'lucide-react'
 import Link from 'next/link'
+
+// Admin password - set this in your environment variable
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
 
 // Words that indicate a product is a part/accessory, not a full appliance
 const PARTS_FILTER_WORDS = [
@@ -22,6 +25,83 @@ function isPartOrAccessory(title: string): boolean {
   if (!title) return false
   const lowerTitle = title.toLowerCase()
   return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
+}
+
+// Login component
+function AdminLogin({ onLogin }: { onLogin: () => void }) {
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+    
+    // Small delay to prevent brute force
+    setTimeout(() => {
+      if (password === ADMIN_PASSWORD) {
+        // Store auth in sessionStorage (clears when browser closes)
+        sessionStorage.setItem('adminAuth', 'true')
+        onLogin()
+      } else {
+        setError('Incorrect password')
+      }
+      setIsLoading(false)
+    }, 500)
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 w-full max-w-md">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="p-3 bg-slate-800 rounded-lg">
+            <Lock className="w-6 h-6 text-slate-400" />
+          </div>
+          <h1 className="text-xl font-bold">Admin Access</h1>
+        </div>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm text-slate-400 mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-600 rounded px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+              placeholder="Enter admin password"
+              autoFocus
+            />
+          </div>
+          
+          {error && (
+            <div className="mb-4 text-red-400 text-sm flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+          
+          <button
+            type="submit"
+            disabled={isLoading || !password}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium py-3 rounded transition"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+            ) : (
+              'Login'
+            )}
+          </button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <Link href="/" className="text-slate-400 hover:text-slate-300 text-sm">
+            ← Back to Home
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // Image component with hover zoom
@@ -61,6 +141,34 @@ type Appliance = {
 const PAGE_SIZE = 50
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
+
+  // Check if already logged in
+  useEffect(() => {
+    const auth = sessionStorage.getItem('adminAuth')
+    setIsAuthenticated(auth === 'true')
+    setAuthChecked(true)
+  }, [])
+
+  // Show loading while checking auth
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    )
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <AdminLogin onLogin={() => setIsAuthenticated(true)} />
+  }
+
+  return <AdminDashboard />
+}
+
+function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState('Refrigerators')
   const [appliances, setAppliances] = useState<Appliance[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -459,6 +567,11 @@ export default function AdminPage() {
     setFullSyncing(false)
   }
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('adminAuth')
+    window.location.reload()
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -473,7 +586,16 @@ export default function AdminPage() {
               <p className="text-xs text-slate-400">Manage appliance database</p>
             </div>
           </div>
-          <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">← Back to Site</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-blue-400 hover:text-blue-300 text-sm">← Back to Site</Link>
+            <button 
+              onClick={handleLogout}
+              className="text-slate-400 hover:text-red-400 text-sm flex items-center gap-1"
+            >
+              <Lock className="w-3 h-3" />
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
