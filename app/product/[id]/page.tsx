@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
 // ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
-const AFFILIATE_TAG = 'appliances04d-20'  // Example: 'applianceprices-20'
+const AFFILIATE_TAG = 'appliances04d-20'
 
 type Appliance = {
   id: string

@@ -7,11 +7,11 @@ import { Star, Zap, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 
 // ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
-const AFFILIATE_TAG = 'appliances04d-20'  // Example: 'applianceprices-20'
+const AFFILIATE_TAG = 'appliances04d-20'
 
 // Helper to add affiliate tag to Amazon URLs
 function getAffiliateUrl(asin: string): string {
-  return `https://www.amazon.com/dp/${asin}?tag=${appliances04d-20}`
+  return `https://www.amazon.com/dp/${asin}?tag=${AFFILIATE_TAG}`
 }
 
 // Words that indicate a product is a part/accessory, not a full appliance

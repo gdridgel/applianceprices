@@ -6,7 +6,7 @@ import { TrendingDown, Percent, Star, ExternalLink, Loader2, RefreshCw } from 'l
 import Link from 'next/link'
 
 // ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
-const AFFILIATE_TAG = 'appliances-04d-20'  // Example: 'mysite-20'
+const AFFILIATE_TAG = 'appliances04d-20'
 
 // Category IDs for Keepa
 const CATEGORY_IDS: Record<string, number> = {
