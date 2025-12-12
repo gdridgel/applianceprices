@@ -1,12 +1,24 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { allCategories } from '@/lib/categoryConfig'
 import { TrendingDown, Percent, Star, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
-// ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
 const AFFILIATE_TAG = 'appliances04d-20'
+
+// Categories list (hardcoded to avoid import issues)
+const CATEGORIES = [
+  'Refrigerators',
+  'Freezers',
+  'Dishwashers',
+  'Ranges',
+  'Washers',
+  'Dryers',
+  'Air Fryers',
+  'Ice Makers',
+  'Window AC',
+  'Televisions'
+]
 
 // Category IDs for Keepa
 const CATEGORY_IDS: Record<string, number> = {
@@ -159,7 +171,7 @@ export default function DealsPage() {
                 className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm"
               >
                 <option value="all">All Categories</option>
-                {allCategories.map(cat => (
+                {CATEGORIES.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
