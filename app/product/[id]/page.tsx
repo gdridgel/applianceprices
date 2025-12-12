@@ -41,6 +41,41 @@ function isVideoUrl(url: string): boolean {
   return videoExtensions.some(ext => lowerUrl.includes(ext)) || lowerUrl.includes('video')
 }
 
+// Generate JSON-LD structured data for product
+function generateProductSchema(product: Appliance) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.title,
+    description: `${product.brand} ${product.model} ${product.type || product.category}`,
+    brand: {
+      '@type': 'Brand',
+      name: product.brand
+    },
+    image: product.image_urls?.length > 0 ? product.image_urls : [product.image_url],
+    sku: product.asin,
+    mpn: product.model,
+    offers: {
+      '@type': 'Offer',
+      url: `https://appliance-prices.com/product/${product.asin}`,
+      priceCurrency: 'USD',
+      price: product.price,
+      priceValidUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      availability: 'https://schema.org/InStock',
+      seller: {
+        '@type': 'Organization',
+        name: 'Amazon'
+      }
+    },
+    aggregateRating: product.rating ? {
+      '@type': 'AggregateRating',
+      ratingValue: product.rating,
+      bestRating: 5,
+      reviewCount: product.review_count || 1
+    } : undefined
+  }
+}
+
 export default function ProductPage() {
   const params = useParams()
   const [product, setProduct] = useState<Appliance | null>(null)
@@ -52,11 +87,33 @@ export default function ProductPage() {
       if (!params.id) return
       
       setIsLoading(true)
-      const { data, error } = await supabase
-        .from('appliances')
-        .select('*')
-        .eq('id', params.id)
-        .single()
+      
+      const idParam = params.id as string
+      let data = null
+      let error = null
+      
+      // Try ASIN lookup first (ASINs are 10 chars, alphanumeric)
+      // Most start with B but not all
+      if (/^[A-Z0-9]{10}$/i.test(idParam)) {
+        const result = await supabase
+          .from('appliances')
+          .select('*')
+          .eq('asin', idParam.toUpperCase())
+          .single()
+        data = result.data
+        error = result.error
+      }
+      
+      // Fall back to ID lookup if ASIN didn't work or wasn't an ASIN format
+      if (!data) {
+        const result = await supabase
+          .from('appliances')
+          .select('*')
+          .eq('id', idParam)
+          .single()
+        data = result.data
+        error = result.error
+      }
       
       if (!error && data) {
         setProduct(data)
@@ -103,16 +160,25 @@ export default function ProductPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-black">
-        <div className="px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to {product.category}
-          </Link>
-        </div>
-      </header>
+    <>
+      {/* Product Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateProductSchema(product))
+        }}
+      />
+      
+      <div className="min-h-screen bg-black text-white">
+        {/* Header */}
+        <header className="border-b border-slate-700 bg-black">
+          <div className="px-4 py-4">
+            <Link href="/" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm">
+              <ArrowLeft className="w-4 h-4" />
+              Back to {product.category}
+            </Link>
+          </div>
+        </header>
 
       <div className="px-4 py-8 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -299,5 +365,6 @@ export default function ProductPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
