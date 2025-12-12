@@ -245,12 +245,12 @@ export default function DealsPage() {
                   <ProductImage src={deal.image} alt={deal.title || ''} asin={deal.asin} />
                 </div>
 
-                {/* Discount Badge */}
-                {deal.dropPercent && (
+                {/* Discount Badge - only show if valid number */}
+                {deal.dropPercent && !isNaN(deal.dropPercent) && deal.dropPercent > 0 && (
                   <div className="flex justify-center mb-2">
                     <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-600 rounded text-sm font-bold">
                       <Percent className="w-3 h-3" />
-                      {Math.abs(deal.dropPercent)}% OFF
+                      {Math.round(Math.abs(deal.dropPercent))}% OFF
                     </span>
                   </div>
                 )}
@@ -263,9 +263,9 @@ export default function DealsPage() {
                 {/* Prices */}
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-xl font-bold text-white">
-                    ${deal.currentPrice?.toLocaleString() || '—'}
+                    {deal.currentPrice ? `$${deal.currentPrice.toLocaleString()}` : '—'}
                   </span>
-                  {deal.previousPrice && deal.previousPrice > (deal.currentPrice || 0) && (
+                  {deal.previousPrice && deal.currentPrice && deal.previousPrice > deal.currentPrice && (
                     <span className="text-sm text-slate-500 line-through">
                       ${deal.previousPrice.toLocaleString()}
                     </span>
@@ -292,7 +292,7 @@ export default function DealsPage() {
 
                 {/* View on Amazon Button */}
                 <a
-                  href={`https://www.amazon.com/dp/${deal.asin}?tag=${AFFILIATE_TAG}`}
+                  href={`https://www.amazon.com/dp/${deal.asin}?tag=${appliances04d-20}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-400 text-sm"

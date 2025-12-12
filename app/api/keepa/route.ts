@@ -243,19 +243,37 @@ export async function POST(request: NextRequest) {
       }
       
       // Format deals for easier use
-      const deals = data.deals?.dr?.map((deal: any) => ({
-        asin: deal.asin,
-        title: deal.title,
-        currentPrice: deal.current ? deal.current[0] / 100 : null,
-        previousPrice: deal.avg ? deal.avg[0] / 100 : null,
-        dropPercent: deal.deltaPercent ? deal.deltaPercent[0] : null,
-        dropAmount: deal.delta ? deal.delta[0] / 100 : null,
-        salesRank: deal.salesRank,
-        rating: deal.rating ? deal.rating / 10 : null,
-        reviewCount: deal.reviewCount,
-        categoryId: deal.categoryId,
-        image: deal.image ? `https://images-na.ssl-images-amazon.com/images/I/${deal.image}` : null
-      })) || []
+      const deals = data.deals?.dr?.map((deal: any) => {
+        // Handle different Keepa response formats
+        const currentPrice = deal.current?.[0] > 0 ? deal.current[0] / 100 : null
+        const avgPrice = deal.avg?.[0] > 0 ? deal.avg[0] / 100 : null
+        const dropPercent = deal.deltaPercent?.[0]
+        const dropAmount = deal.delta?.[0] ? Math.abs(deal.delta[0]) / 100 : null
+        
+        // Build image URL - Keepa sometimes returns just the image ID
+        let imageUrl = null
+        if (deal.image) {
+          if (deal.image.startsWith('http')) {
+            imageUrl = deal.image
+          } else {
+            imageUrl = `https://images-na.ssl-images-amazon.com/images/I/${deal.image}`
+          }
+        }
+        
+        return {
+          asin: deal.asin,
+          title: deal.title,
+          currentPrice,
+          previousPrice: avgPrice,
+          dropPercent: typeof dropPercent === 'number' && !isNaN(dropPercent) ? dropPercent : null,
+          dropAmount,
+          salesRank: deal.salesRank,
+          rating: deal.rating ? deal.rating / 10 : null,
+          reviewCount: deal.reviewCount,
+          categoryId: deal.categoryId,
+          image: imageUrl
+        }
+      }) || []
       
       return NextResponse.json({
         success: true,
