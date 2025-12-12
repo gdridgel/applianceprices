@@ -6,6 +6,14 @@ import { categoryConfig, allCategories } from '@/lib/categoryConfig'
 import { Star, Zap, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 
+// ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
+const AFFILIATE_TAG = 'appliances04d-20'  // Example: 'applianceprices-20'
+
+// Helper to add affiliate tag to Amazon URLs
+function getAffiliateUrl(asin: string): string {
+  return `https://www.amazon.com/dp/${asin}?tag=${appliances04d-20}`
+}
+
 // Words that indicate a product is a part/accessory, not a full appliance
 const PARTS_FILTER_WORDS = [
   'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
@@ -411,7 +419,7 @@ export default function Home() {
                             return (
                               <td key={col.key} className="px-2 py-1">
                                 <a
-                                  href={item.product_url}
+                                  href={getAffiliateUrl(item.asin)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-400 hover:underline line-clamp-1"

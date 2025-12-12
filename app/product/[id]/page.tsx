@@ -6,6 +6,9 @@ import { ArrowLeft, Star, ExternalLink, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
+// ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
+const AFFILIATE_TAG = 'appliances04d-20'  // Example: 'applianceprices-20'
+
 type Appliance = {
   id: string
   asin: string
@@ -267,7 +270,7 @@ export default function ProductPage() {
             
             {/* Buy Button */}
             <a
-              href={product.product_url}
+              href={`https://www.amazon.com/dp/${product.asin}?tag=${AFFILIATE_TAG}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 mb-8"
