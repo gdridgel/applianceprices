@@ -332,7 +332,7 @@ export async function queryProducts(category: string, page: number = 0): Promise
     ],
     productType: [0, 1, 2],
     page: page,
-    perPage: 100
+    perPage: 500
   }
 
   const encodedSelection = encodeURIComponent(JSON.stringify(selection))

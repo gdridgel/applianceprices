@@ -29,21 +29,23 @@ function ProductImage({ src, alt }: { src: string | null, alt: string }) {
   const [isHovered, setIsHovered] = useState(false)
   
   return (
-    <div className="relative">
+    <div 
+      className="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {src ? (
         <img 
           src={src} 
           alt={alt}
           className="w-16 h-16 object-contain bg-white rounded cursor-pointer"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         />
       ) : (
         <div className="w-16 h-16 bg-slate-700 rounded" />
       )}
       {isHovered && src && (
-        <div className="absolute z-50 left-full ml-2 top-0 bg-white p-2 rounded-lg shadow-xl border border-slate-600">
-          <img src={src} alt={alt} className="w-48 h-48 object-contain" />
+        <div className="fixed z-[9999] bg-white p-2 rounded-lg shadow-2xl border border-slate-600" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+          <img src={src} alt={alt} className="w-64 h-64 object-contain" />
         </div>
       )}
     </div>
@@ -733,16 +735,28 @@ export default function AdminPage() {
             </div>
           )}
           
-          {/* Bottom pagination */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-slate-700 flex justify-center items-center gap-2">
-              <button onClick={() => setCurrentPage(0)} disabled={currentPage === 0} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">First</button>
-              <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Prev</button>
-              <span className="text-sm px-4 text-slate-300">Page {currentPage + 1} of {totalPages}</span>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Next</button>
-              <button onClick={() => setCurrentPage(totalPages - 1)} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Last</button>
-            </div>
-          )}
+          {/* Bottom pagination and delete button */}
+          <div className="p-4 border-t border-slate-700 flex flex-wrap justify-between items-center gap-4">
+            {selectedIds.size > 0 && (
+              <button 
+                onClick={handleBulkDelete} 
+                disabled={bulkDeleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Delete {selectedIds.size} Selected
+              </button>
+            )}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2 ml-auto">
+                <button onClick={() => setCurrentPage(0)} disabled={currentPage === 0} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">First</button>
+                <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Prev</button>
+                <span className="text-sm px-4 text-slate-300">Page {currentPage + 1} of {totalPages}</span>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Next</button>
+                <button onClick={() => setCurrentPage(totalPages - 1)} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Last</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

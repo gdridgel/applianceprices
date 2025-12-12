@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
       const startPage = progressData?.last_page || 0
       const previousTotal = progressData?.total_discovered || 0
       
-      // Fetch next 5 pages (500 products)
-      const pagesToFetch = 5
+      // Fetch 1 page (1000 products per page)
+      const pagesToFetch = 1
       const deletedAsins = await getDeletedAsins()
       
       // Get existing ASINs
