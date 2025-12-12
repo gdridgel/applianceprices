@@ -1,13 +1,16 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { allCategories } from '@/lib/categoryConfig'
+import { allCategories, categoryConfig } from '@/lib/categoryConfig'
 import { Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle, RefreshCw, Search, Zap, ChevronLeft, ChevronRight, Sparkles, Lock } from 'lucide-react'
 import Link from 'next/link'
 
 // Admin password - set this in your environment variable
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
+
+// Priority brands to show at top
+const PRIORITY_BRANDS = ['GE', 'Kenmore', 'LG', 'Maytag', 'Samsung', 'Whirlpool']
 
 // Words that indicate a product is a part/accessory, not a full appliance
 const PARTS_FILTER_WORDS = [
@@ -209,6 +212,80 @@ function AdminDashboard() {
   const [cleaning, setCleaning] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<any>(null)
 
+  // Filter state
+  const [filters, setFilters] = useState({
+    types: [] as string[],
+    brands: [] as string[],
+    colors: [] as string[],
+  })
+
+  const config = categoryConfig[selectedCategory]
+
+  // Get unique brands from appliances
+  const brands = useMemo(() => {
+    const brandSet = new Set(appliances.map(a => a.brand).filter(Boolean))
+    const allBrands = Array.from(brandSet).sort()
+    const priorityBrands = PRIORITY_BRANDS.filter(b => brandSet.has(b))
+    const otherBrands = allBrands.filter(b => !PRIORITY_BRANDS.includes(b))
+    return [...priorityBrands, ...otherBrands]
+  }, [appliances])
+
+  // Get unique colors from appliances
+  const colors = useMemo(() => {
+    const colorSet = new Set(appliances.map(a => a.color).filter(Boolean))
+    return Array.from(colorSet).sort()
+  }, [appliances])
+
+  // Count items per filter value
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    appliances.forEach(a => {
+      if (a.type) counts[a.type] = (counts[a.type] || 0) + 1
+    })
+    return counts
+  }, [appliances])
+
+  const brandCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    appliances.forEach(a => {
+      if (a.brand) counts[a.brand] = (counts[a.brand] || 0) + 1
+    })
+    return counts
+  }, [appliances])
+
+  const colorCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    appliances.forEach(a => {
+      if (a.color) counts[a.color] = (counts[a.color] || 0) + 1
+    })
+    return counts
+  }, [appliances])
+
+  // Filter appliances
+  const filteredAppliances = useMemo(() => {
+    return appliances.filter(item => {
+      if (filters.types.length > 0 && !filters.types.includes(item.type)) return false
+      if (filters.brands.length > 0 && !filters.brands.includes(item.brand)) return false
+      if (filters.colors.length > 0 && !filters.colors.includes(item.color)) return false
+      return true
+    })
+  }, [appliances, filters])
+
+  const toggleFilter = (filterType: 'types' | 'brands' | 'colors', value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: prev[filterType].includes(value)
+        ? prev[filterType].filter(v => v !== value)
+        : [...prev[filterType], value]
+    }))
+  }
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    setFilters({ types: [], brands: [], colors: [] })
+    setCurrentPage(0)
+  }
+
   const fetchCounts = useCallback(async () => {
     const newCounts: Record<string, number> = {}
     for (const cat of allCategories) {
@@ -291,10 +368,10 @@ function AdminDashboard() {
 
   // Select all on current page
   const toggleSelectAll = () => {
-    if (selectedIds.size === appliances.length) {
+    if (selectedIds.size === filteredAppliances.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(appliances.map(a => a.id)))
+      setSelectedIds(new Set(filteredAppliances.map(a => a.id)))
     }
   }
 
@@ -306,7 +383,7 @@ function AdminDashboard() {
     setBulkDeleting(true)
     try {
       // Get ASINs for selected items
-      const selectedAppliances = appliances.filter(a => selectedIds.has(a.id))
+      const selectedAppliances = filteredAppliances.filter(a => selectedIds.has(a.id))
       const asinsToBlock = selectedAppliances.map(a => a.asin).filter(Boolean)
       
       // Add to deleted_asins
@@ -771,56 +848,147 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Products Table */}
-        <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="p-4 border-b border-slate-700 flex flex-wrap justify-between items-center gap-4">
-            <div className="flex items-center gap-4">
-              <h2 className="font-semibold text-white">{selectedCategory} ({totalCount} total)</h2>
-              {selectedIds.size > 0 && (
-                <button 
-                  onClick={handleBulkDelete} 
-                  disabled={bulkDeleting}
-                  className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
-                >
-                  {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  Delete {selectedIds.size} Selected
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))} 
-                disabled={currentPage === 0}
-                className="p-2 rounded hover:bg-slate-700 disabled:opacity-30"
+        {/* Products Section with Sidebar */}
+        <div className="flex gap-6">
+          {/* Filter Sidebar */}
+          <div className="w-56 flex-shrink-0">
+            {/* Category dropdown */}
+            <div className="mb-5">
+              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Category</label>
+              <select 
+                value={selectedCategory} 
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white"
               >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm text-slate-300">Page {currentPage + 1} of {totalPages || 1}</span>
-              <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} 
-                disabled={currentPage >= totalPages - 1}
-                className="p-2 rounded hover:bg-slate-700 disabled:opacity-30"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
+                {allCategories.map(cat => (
+                  <option key={cat} value={cat}>
+                    {cat} ({counts[cat] || 0})
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {/* Type filter */}
+            {config?.types && config.types.length > 0 && (
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Type</label>
+                <div className="space-y-1">
+                  {config.types.map(type => (
+                    <label key={type} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.types.includes(type)}
+                        onChange={() => toggleFilter('types', type)}
+                        className="rounded border-slate-500 bg-slate-700"
+                      />
+                      <span className="text-slate-300">{type} ({typeCounts[type] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Brand filter */}
+            {brands.length > 0 && (
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {brands.map(brand => (
+                    <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.brands.includes(brand)}
+                        onChange={() => toggleFilter('brands', brand)}
+                        className="rounded border-slate-500 bg-slate-700"
+                      />
+                      <span className="text-slate-300">{brand} ({brandCounts[brand] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Color filter */}
+            {colors.length > 0 && (
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Color</label>
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {colors.map(color => (
+                    <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.colors.includes(color)}
+                        onChange={() => toggleFilter('colors', color)}
+                        className="rounded border-slate-500 bg-slate-700"
+                      />
+                      <span className="text-slate-300">{color} ({colorCounts[color] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Clear filters */}
+            {(filters.types.length > 0 || filters.brands.length > 0 || filters.colors.length > 0) && (
+              <button
+                onClick={() => setFilters({ types: [], brands: [], colors: [] })}
+                className="w-full text-sm text-red-400 hover:text-red-300 py-2 border border-red-400/30 rounded hover:bg-red-400/10 transition"
+              >
+                Clear All Filters
+              </button>
+            )}
           </div>
-          
-          {isLoading ? (
-            <div className="p-8 text-center text-slate-400">Loading...</div>
-          ) : appliances.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">No products. Use Keepa to discover products!</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-800">
-                  <tr>
-                    <th className="text-left px-4 py-3">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.size === appliances.length && appliances.length > 0}
-                        onChange={toggleSelectAll}
-                        className="rounded"
+
+          {/* Products Table */}
+          <div className="flex-1 bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+            <div className="p-4 border-b border-slate-700 flex flex-wrap justify-between items-center gap-4">
+              <div className="flex items-center gap-4">
+                <h2 className="font-semibold text-white">{selectedCategory} ({filteredAppliances.length} of {totalCount})</h2>
+                {selectedIds.size > 0 && (
+                  <button 
+                    onClick={handleBulkDelete} 
+                    disabled={bulkDeleting}
+                    className="flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm"
+                  >
+                    {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    Delete {selectedIds.size} Selected
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(0, p - 1))} 
+                  disabled={currentPage === 0}
+                  className="p-2 rounded hover:bg-slate-700 disabled:opacity-30"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm text-slate-300">Page {currentPage + 1} of {totalPages || 1}</span>
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} 
+                  disabled={currentPage >= totalPages - 1}
+                  className="p-2 rounded hover:bg-slate-700 disabled:opacity-30"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            {isLoading ? (
+              <div className="p-8 text-center text-slate-400">Loading...</div>
+            ) : filteredAppliances.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">No products match your filters.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-800">
+                    <tr>
+                      <th className="text-left px-4 py-3">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedIds.size === filteredAppliances.length && filteredAppliances.length > 0}
+                          onChange={toggleSelectAll}
+                          className="rounded"
                       />
                     </th>
                     <th className="text-left px-4 py-3 text-slate-300">Image</th>
@@ -832,7 +1000,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {appliances.map(item => (
+                  {filteredAppliances.map(item => (
                     <tr key={item.id} className={`border-t border-slate-700 hover:bg-slate-800 ${selectedIds.has(item.id) ? 'bg-slate-800' : ''}`}>
                       <td className="px-4 py-3">
                         <input 
@@ -878,6 +1046,7 @@ function AdminDashboard() {
                 <button onClick={() => setCurrentPage(totalPages - 1)} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Last</button>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

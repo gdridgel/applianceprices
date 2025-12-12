@@ -245,9 +245,7 @@ export default function Home() {
             transform transition-transform duration-300 ease-in-out
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             md:flex-shrink-0
-            overflow-y-auto
             p-4 md:p-0
-            md:top-20 md:sticky md:h-[calc(100vh-100px)]
           `}>
             {/* Close button for mobile */}
             <div className="md:hidden flex justify-end mb-4">
