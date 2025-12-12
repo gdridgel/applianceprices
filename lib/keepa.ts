@@ -64,14 +64,17 @@ export interface KeepaProduct {
   videoUrls: string[]
   productUrl: string
   category: string
-  // Dimensions in inches (parsed from size field)
+  // Dimensions in inches
   widthIn: number | null
   depthIn: number | null
   heightIn: number | null
   // Weight in pounds
   weightLbs: number | null
+  // Screen size for TVs (inches)
+  screenSize: number | null
   // Parsed specs
   capacityCuFt: number | null
+  btu: number | null
   energyStar: boolean
   iceMaker: boolean
   waterDispenser: boolean
@@ -89,6 +92,17 @@ function keepaPriceToDollars(price: number | null | undefined): number | null {
 function gramsToLbs(grams: number | null | undefined): number | null {
   if (grams === null || grams === undefined || grams <= 0) return null
   return Math.round((grams / 453.592) * 10) / 10
+}
+
+// Convert Keepa dimension units (hundredths of inch or mm depending on field) to inches
+function toInches(value: number | null | undefined, isMetric: boolean = false): number | null {
+  if (value === null || value === undefined || value <= 0) return null
+  if (isMetric) {
+    // Convert mm to inches
+    return Math.round((value / 25.4) * 10) / 10
+  }
+  // Keepa stores dimensions in hundredths of an inch for some fields
+  return Math.round(value) / 100
 }
 
 // Parse dimensions from size field like "18.7''*17.4''*33.1''(W*D*H)"
@@ -117,6 +131,59 @@ function parseSizeDimensions(size: string | null): { width: number | null, depth
   }
   
   return { width: null, depth: null, height: null }
+}
+
+// Get dimensions from Keepa's direct fields (more reliable than parsing size string)
+function getDirectDimensions(item: any): { width: number | null, depth: number | null, height: number | null, weight: number | null } {
+  // Try item dimensions first (product dimensions), then package dimensions
+  // Keepa stores these in different units depending on the field
+  
+  let width: number | null = null
+  let depth: number | null = null  
+  let height: number | null = null
+  let weight: number | null = null
+  
+  // Item dimensions (in hundredths of inches or mm)
+  if (item.itemWidth && item.itemWidth > 0) {
+    width = Math.round(item.itemWidth / 100 * 10) / 10
+  }
+  if (item.itemLength && item.itemLength > 0) {
+    depth = Math.round(item.itemLength / 100 * 10) / 10
+  }
+  if (item.itemHeight && item.itemHeight > 0) {
+    height = Math.round(item.itemHeight / 100 * 10) / 10
+  }
+  
+  // Fall back to package dimensions
+  if (!width && item.packageWidth && item.packageWidth > 0) {
+    width = Math.round(item.packageWidth / 100 * 10) / 10
+  }
+  if (!depth && item.packageLength && item.packageLength > 0) {
+    depth = Math.round(item.packageLength / 100 * 10) / 10
+  }
+  if (!height && item.packageHeight && item.packageHeight > 0) {
+    height = Math.round(item.packageHeight / 100 * 10) / 10
+  }
+  
+  // Weight - item weight in grams
+  if (item.itemWeight && item.itemWeight > 0) {
+    weight = gramsToLbs(item.itemWeight)
+  } else if (item.packageWeight && item.packageWeight > 0) {
+    weight = gramsToLbs(item.packageWeight)
+  }
+  
+  return { width, depth, height, weight }
+}
+
+// Parse screen size from title or features (for TVs)
+function parseScreenSize(text: string): number | null {
+  if (!text) return null
+  // Match patterns like "55 inch", "55-inch", "55"", '55 Class'
+  const match = text.match(/(\d{2,3})[\s-]*(?:inch|"|''|in\b|class)/i)
+  if (match) {
+    return parseInt(match[1])
+  }
+  return null
 }
 
 // Parse capacity from text (title, included components, etc.)
@@ -314,14 +381,21 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       })
     }
 
-    // Parse dimensions from size field (e.g., "18.7''*17.4''*33.1''(W*D*H)")
-    const dimensions = parseSizeDimensions(item.size)
+    // Get dimensions - try direct fields first, then parse from size string
+    const directDims = getDirectDimensions(item)
+    const parsedDims = parseSizeDimensions(item.size)
     
-    // Get weight - convert from grams to pounds
-    const weightLbs = gramsToLbs(item.itemWeight) || gramsToLbs(item.packageWeight)
+    // Use direct dimensions if available, otherwise fall back to parsed
+    const widthIn = directDims.width || parsedDims.width
+    const depthIn = directDims.depth || parsedDims.depth
+    const heightIn = directDims.height || parsedDims.height
+    const weightLbs = directDims.weight
 
     // Parse specs from title and included components
     const specs = parseSpecs(item.title || '', item.includedComponents || null)
+    
+    // Parse screen size for TVs
+    const screenSize = parseScreenSize(item.title || '') || parseScreenSize(item.features?.join(' ') || '')
 
     return {
       asin: item.asin,
@@ -342,11 +416,13 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       videoUrls,
       productUrl: `https://www.amazon.com/dp/${item.asin}`,
       category,
-      widthIn: dimensions.width,
-      depthIn: dimensions.depth,
-      heightIn: dimensions.height,
+      widthIn,
+      depthIn,
+      heightIn,
       weightLbs,
+      screenSize,
       capacityCuFt: specs.capacityCuFt,
+      btu: specs.btu,
       energyStar: specs.energyStar,
       iceMaker: specs.iceMaker,
       waterDispenser: specs.waterDispenser,

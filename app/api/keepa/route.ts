@@ -72,7 +72,9 @@ function buildRecord(product: KeepaProduct) {
     height_in: product.heightIn,
     weight_lbs: product.weightLbs,
     // Specs
+    screen_size: product.screenSize,
     capacity_cu_ft: product.capacityCuFt,
+    btu: product.btu,
     energy_star: product.energyStar,
     ice_maker: product.iceMaker,
     water_dispenser: product.waterDispenser,
@@ -87,13 +89,57 @@ export async function POST(request: NextRequest) {
     const { action, category, asins, categoryId } = body
 
     if (action === 'test') {
-      // Test endpoint - fetch one product and return parsed data
-      const testAsin = 'B0B9M9Z1FQ' // A refrigerator from your CSV
+      // Test endpoint - fetch one product and return parsed data + raw fields
+      const testAsin = body.asin || 'B0B9M9Z1FQ' // Default to a refrigerator
+      const url = `https://api.keepa.com/product?key=${process.env.KEEPA_API_KEY}&domain=1&asin=${testAsin}&stats=180&rating=1&videos=1`
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (data.error) {
+        return NextResponse.json({ success: false, error: data.error.message })
+      }
+      
+      const rawProduct = data.products?.[0]
+      
+      // Show available dimension/spec fields from Keepa
+      const dimensionFields = {
+        // Direct dimension fields
+        packageHeight: rawProduct?.packageHeight,
+        packageLength: rawProduct?.packageLength, 
+        packageWidth: rawProduct?.packageWidth,
+        packageWeight: rawProduct?.packageWeight,
+        itemHeight: rawProduct?.itemHeight,
+        itemLength: rawProduct?.itemLength,
+        itemWidth: rawProduct?.itemWidth,
+        itemWeight: rawProduct?.itemWeight,
+        // Size field (often contains formatted dimensions)
+        size: rawProduct?.size,
+        // Features that might contain specs
+        features: rawProduct?.features,
+        // Technical details
+        technicalDetails: rawProduct?.technicalDetails,
+        // Other spec fields
+        displaySize: rawProduct?.displaySize,
+        screenSize: rawProduct?.screenSize,
+        resolution: rawProduct?.resolution,
+        capacity: rawProduct?.capacity,
+        wattage: rawProduct?.wattage,
+        voltage: rawProduct?.voltage,
+        material: rawProduct?.material,
+        includedComponents: rawProduct?.includedComponents,
+        partNumber: rawProduct?.partNumber,
+        modelNumber: rawProduct?.model,
+      }
+      
       const products = await getProductsByAsins([testAsin], 'Refrigerators')
+      
       return NextResponse.json({
         success: true,
         message: 'Test completed',
-        product: products[0] || null
+        parsedProduct: products[0] || null,
+        rawDimensionFields: dimensionFields,
+        allRawFields: Object.keys(rawProduct || {})
       })
     }
 
