@@ -5,7 +5,19 @@ const KEEPA_API_KEY = process.env.KEEPA_API_KEY
 const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[] }> = {
   'Refrigerators': {
     categoryId: '3741361',
-    searchTerms: ['refrigerator']
+    searchTerms: ['refrigerator', 'kegerator']
+  },
+  'Freezers': {
+    categoryId: '3741331',
+    searchTerms: ['freezer']
+  },
+  'Dishwashers': {
+    categoryId: '3741271',
+    searchTerms: ['dishwasher']
+  },
+  'Ranges': {
+    categoryId: '3741411',
+    searchTerms: ['range', 'stove']
   },
   'Washers': {
     categoryId: '13397491',
@@ -26,10 +38,6 @@ const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[
   'Window AC': {
     categoryId: '1193678',
     searchTerms: ['window air conditioner']
-  },
-  'Freezers': {
-    categoryId: '3741321',
-    searchTerms: ['freezer']
   }
 }
 
@@ -138,14 +146,27 @@ function parseType(text: string): string | null {
   if (/top[\s-]*freezer/i.test(lowerText)) return 'Top Freezer'
   if (/bottom[\s-]*freezer/i.test(lowerText)) return 'Bottom Freezer'
   if (/mini|compact|dorm/i.test(lowerText)) return 'Mini/Compact'
+  if (/kegerator|keg\s*cooler|beer\s*dispenser/i.test(lowerText)) return 'Kegerator'
+  
+  // Freezer types
+  if (/chest\s*freezer/i.test(lowerText)) return 'Chest Freezer'
+  if (/upright\s*freezer/i.test(lowerText)) return 'Upright Freezer'
+  if (/chest/i.test(lowerText)) return 'Chest Freezer'
+  if (/upright/i.test(lowerText)) return 'Upright Freezer'
+  
+  // Dishwasher types
+  if (/built[\s-]*in\s*dishwasher|built[\s-]*in/i.test(lowerText) && /dishwasher/i.test(lowerText)) return 'Built-In Dishwasher'
+  if (/countertop\s*dishwasher/i.test(lowerText)) return 'Countertop Dishwasher'
+  if (/portable\s*dishwasher/i.test(lowerText)) return 'Portable Dishwasher'
+  
+  // Range types
+  if (/drop[\s-]*in\s*range|drop[\s-]*in/i.test(lowerText)) return 'Drop-In Range'
+  if (/freestanding\s*range|freestanding/i.test(lowerText)) return 'Freestanding Range'
+  if (/slide[\s-]*in\s*range|slide[\s-]*in/i.test(lowerText)) return 'Slide-In Range'
   
   // Washer/Dryer types
   if (/front[\s-]*load/i.test(lowerText)) return 'Front Load'
   if (/top[\s-]*load/i.test(lowerText)) return 'Top Load'
-  
-  // Freezer types
-  if (/chest/i.test(lowerText)) return 'Chest'
-  if (/upright/i.test(lowerText)) return 'Upright'
   
   // Other types
   if (/portable/i.test(lowerText)) return 'Portable'

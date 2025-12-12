@@ -30,23 +30,25 @@ function ProductImage({ src, alt, link }: { src: string | null, alt: string, lin
   const [isHovered, setIsHovered] = useState(false)
   
   return (
-    <div className="relative">
+    <div 
+      className="relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <Link href={link}>
         {src ? (
           <img 
             src={src} 
             alt={alt}
             className="w-16 h-16 object-contain cursor-pointer bg-white rounded"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
           />
         ) : (
           <div className="w-16 h-16 bg-slate-700 rounded" />
         )}
       </Link>
       {isHovered && src && (
-        <div className="absolute z-50 left-full ml-2 top-0 bg-white p-2 rounded-lg shadow-xl border border-slate-300">
-          <img src={src} alt={alt} className="w-48 h-48 object-contain" />
+        <div className="absolute z-50 left-20 top-0 bg-white p-2 rounded-lg shadow-xl border border-slate-300">
+          <img src={src} alt={alt} className="w-64 h-64 object-contain" />
         </div>
       )}
     </div>

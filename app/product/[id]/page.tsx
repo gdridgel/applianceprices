@@ -20,6 +20,7 @@ type Appliance = {
   review_count: number
   image_url: string
   image_urls: string[]
+  video_urls: string[]
   product_url: string
   category: string
   width_in: number
@@ -30,6 +31,14 @@ type Appliance = {
   energy_star: boolean
   ice_maker: boolean
   water_dispenser: boolean
+}
+
+// Check if URL is a video
+function isVideoUrl(url: string): boolean {
+  if (!url) return false
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov']
+  const lowerUrl = url.toLowerCase()
+  return videoExtensions.some(ext => lowerUrl.includes(ext)) || lowerUrl.includes('video')
 }
 
 export default function ProductPage() {
@@ -80,11 +89,18 @@ export default function ProductPage() {
     ? Math.round(((product.list_price - product.price) / product.list_price) * 100)
     : null
 
-  const images = product.image_urls && product.image_urls.length > 0 
+  // Separate images and videos
+  const allMedia = product.image_urls && product.image_urls.length > 0 
     ? product.image_urls 
     : product.image_url 
       ? [product.image_url] 
       : []
+  
+  const images = allMedia.filter(url => !isVideoUrl(url))
+  const videos = [
+    ...(product.video_urls || []),
+    ...allMedia.filter(url => isVideoUrl(url))
+  ]
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -100,15 +116,23 @@ export default function ProductPage() {
 
       <div className="px-4 py-8 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Image Section */}
+          {/* Media Section */}
           <div>
             <div className="bg-white rounded-lg p-4 mb-4">
               {selectedImage ? (
-                <img 
-                  src={selectedImage} 
-                  alt={product.title}
-                  className="w-full h-96 object-contain"
-                />
+                isVideoUrl(selectedImage) ? (
+                  <video 
+                    src={selectedImage}
+                    controls
+                    className="w-full h-96 object-contain"
+                  />
+                ) : (
+                  <img 
+                    src={selectedImage} 
+                    alt={product.title}
+                    className="w-full h-96 object-contain"
+                  />
+                )
               ) : (
                 <div className="w-full h-96 bg-slate-200 rounded flex items-center justify-center text-slate-400">
                   No Image
@@ -116,16 +140,25 @@ export default function ProductPage() {
               )}
             </div>
             
-            {/* Thumbnail Gallery */}
-            {images.length > 1 && (
+            {/* Thumbnail Gallery (images and videos) */}
+            {(images.length > 1 || videos.length > 0) && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {images.map((img, i) => (
                   <button
-                    key={i}
+                    key={`img-${i}`}
                     onClick={() => setSelectedImage(img)}
                     className={`flex-shrink-0 w-16 h-16 bg-white rounded p-1 border-2 ${selectedImage === img ? 'border-blue-500' : 'border-transparent'}`}
                   >
                     <img src={img} alt="" className="w-full h-full object-contain" />
+                  </button>
+                ))}
+                {videos.map((vid, i) => (
+                  <button
+                    key={`vid-${i}`}
+                    onClick={() => setSelectedImage(vid)}
+                    className={`flex-shrink-0 w-16 h-16 bg-slate-800 rounded p-1 border-2 flex items-center justify-center ${selectedImage === vid ? 'border-blue-500' : 'border-transparent'}`}
+                  >
+                    <span className="text-white text-xs">▶ Video</span>
                   </button>
                 ))}
               </div>
