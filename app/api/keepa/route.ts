@@ -89,6 +89,44 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, category, asins, categoryId } = body
 
+    if (action === 'test-deals') {
+      // Test the deals API directly with minimal query
+      const queryJSON = {
+        page: 0,
+        domainId: 1,
+        priceTypes: [0],
+        deltaPercentRange: [20, 100],
+        currentRange: [5000, 500000],
+        isRangeEnabled: true,
+        isFilterEnabled: false,
+        hasReviews: true,
+        singleVariation: true,
+        sortType: 4,
+        dateRange: 1
+      }
+      
+      const url = `https://api.keepa.com/deal?key=${process.env.KEEPA_API_KEY}`
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryJSON)
+      })
+      const data = await response.json()
+      
+      return NextResponse.json({
+        success: !data.error,
+        query: queryJSON,
+        responseKeys: Object.keys(data),
+        error: data.error || null,
+        dealsCount: data.dr?.length || 0,
+        firstDeal: data.dr?.[0] || null,
+        categoryIds: data.categoryIds?.slice(0, 5) || [],
+        categoryNames: data.categoryNames?.slice(0, 5) || [],
+        rawResponse: data.error ? data : undefined
+      })
+    }
+
     if (action === 'test') {
       // Test endpoint - fetch one product and return parsed data + raw fields
       const testAsin = body.asin || 'B0B9M9Z1FQ' // Default to a refrigerator
@@ -212,23 +250,30 @@ export async function POST(request: NextRequest) {
         page = 0
       } = body
       
-      const queryJSON = {
+      // Build query - only include filters that are actually needed
+      const queryJSON: any = {
         page,
         domainId: 1, // Amazon.com
-        includeCategories: categoryIds || [],
         priceTypes: [0], // Amazon price
         deltaPercentRange: [minDiscount, 100],
         currentRange: [minPrice, maxPrice],
-        salesRankRange: [0, 100000], // Top 100k sellers
         minRating,
         isRangeEnabled: true,
-        isFilterEnabled: categoryIds && categoryIds.length > 0,
+        isFilterEnabled: false,
         filterErotic: true,
-        hasReviews: true,
+        hasReviews: false, // Don't require reviews - too restrictive
         singleVariation: true,
         sortType: 4, // Sort by percentage delta (biggest discounts first)
         dateRange
       }
+      
+      // Only add category filter if categories specified
+      if (categoryIds && categoryIds.length > 0) {
+        queryJSON.includeCategories = categoryIds
+        queryJSON.isFilterEnabled = true
+      }
+      
+      // Don't include salesRankRange - it filters out products without sales rank
       
       console.log('Deals query:', JSON.stringify(queryJSON))
       
