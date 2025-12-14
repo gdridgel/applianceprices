@@ -365,13 +365,14 @@ function HomeContent() {
         <div className="flex gap-6">
           {/* Sidebar */}
           <div className={`
-            fixed md:relative inset-y-0 left-0 z-50 
+            fixed md:relative inset-y-0 left-0 z-50 md:z-0
             w-72 md:w-56 
             bg-black md:bg-transparent
             transform transition-transform duration-300 ease-in-out
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             md:flex-shrink-0
             p-4 md:p-0
+            md:sticky md:top-20 md:h-[calc(100vh-100px)] md:overflow-y-auto
           `}>
             {/* Close button for mobile */}
             <div className="md:hidden flex justify-end mb-4">
