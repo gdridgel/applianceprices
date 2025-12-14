@@ -408,7 +408,7 @@ function HomeContent() {
                         type="checkbox"
                         checked={filters.types.includes(type)}
                         onChange={() => toggleFilter('types', type)}
-                        className="rounded border-slate-500 bg-slate-700"
+                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
                       />
                       <span className="text-slate-300">{type} ({typeCounts[type] || 0})</span>
                     </label>
@@ -428,9 +428,29 @@ function HomeContent() {
                         type="checkbox"
                         checked={filters.brands.includes(brand)}
                         onChange={() => toggleFilter('brands', brand)}
-                        className="rounded border-slate-500 bg-slate-700"
+                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
                       />
                       <span className="text-slate-300">{brand} ({brandCounts[brand] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Screen Size filter - only for TVs (before Color) */}
+            {selectedCategory === 'Televisions' && (
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Screen Size</label>
+                <div className="space-y-1">
+                  {TV_SIZE_RANGES.map(range => (
+                    <label key={range.label} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.screenSizes.includes(range.label)}
+                        onChange={() => toggleFilter('screenSizes', range.label)}
+                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span className="text-slate-300">{range.label} ({screenSizeCounts[range.label] || 0})</span>
                     </label>
                   ))}
                 </div>
@@ -448,29 +468,9 @@ function HomeContent() {
                         type="checkbox"
                         checked={filters.colors.includes(color)}
                         onChange={() => toggleFilter('colors', color)}
-                        className="rounded border-slate-500 bg-slate-700"
+                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
                       />
                       <span className="text-slate-300">{color} ({colorCounts[color] || 0})</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Screen Size filter - only for TVs */}
-            {selectedCategory === 'Televisions' && (
-              <div className="mb-5">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Screen Size</label>
-                <div className="space-y-1">
-                  {TV_SIZE_RANGES.map(range => (
-                    <label key={range.label} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.screenSizes.includes(range.label)}
-                        onChange={() => toggleFilter('screenSizes', range.label)}
-                        className="rounded border-slate-500 bg-slate-700"
-                      />
-                      <span className="text-slate-300">{range.label} ({screenSizeCounts[range.label] || 0})</span>
                     </label>
                   ))}
                 </div>
