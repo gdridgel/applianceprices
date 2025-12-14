@@ -210,7 +210,9 @@ function HomeContent() {
 
   // State for expanding brand list
   const [brandsExpanded, setBrandsExpanded] = useState(false)
-  const BRANDS_COLLAPSED_COUNT = 8
+  const [colorsExpanded, setColorsExpanded] = useState(false)
+  const COLLAPSED_COUNT = 10
+  const EXPANDED_COUNT = 20
 
   const brands = useMemo(() => {
     // Count products per brand
@@ -334,6 +336,7 @@ function HomeContent() {
     setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
     setCurrentPage(0)
     setBrandsExpanded(false)
+    setColorsExpanded(false)
     // URL will be updated by the useEffect
   }
 
@@ -442,8 +445,8 @@ function HomeContent() {
             {brands.length > 0 && (
               <div className="mb-5">
                 <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
-                <div className={`space-y-1 ${brandsExpanded ? 'max-h-64 overflow-y-auto' : ''}`}>
-                  {(brandsExpanded ? brands.slice(0, 10) : brands.slice(0, BRANDS_COLLAPSED_COUNT)).map(brand => (
+                <div className="space-y-1">
+                  {(brandsExpanded ? brands.slice(0, EXPANDED_COUNT) : brands.slice(0, COLLAPSED_COUNT)).map(brand => (
                     <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
@@ -455,7 +458,7 @@ function HomeContent() {
                     </label>
                   ))}
                 </div>
-                {brands.length > BRANDS_COLLAPSED_COUNT && (
+                {brands.length > COLLAPSED_COUNT && (
                   <button
                     onClick={() => setBrandsExpanded(!brandsExpanded)}
                     className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
@@ -486,12 +489,12 @@ function HomeContent() {
               </div>
             )}
 
-            {/* Color filter - expanded */}
+            {/* Color filter - collapsible */}
             {colors.length > 0 && (
               <div className="mb-5">
                 <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Color</label>
                 <div className="space-y-1">
-                  {colors.map(color => (
+                  {(colorsExpanded ? colors.slice(0, EXPANDED_COUNT) : colors.slice(0, COLLAPSED_COUNT)).map(color => (
                     <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
@@ -503,6 +506,14 @@ function HomeContent() {
                     </label>
                   ))}
                 </div>
+                {colors.length > COLLAPSED_COUNT && (
+                  <button
+                    onClick={() => setColorsExpanded(!colorsExpanded)}
+                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
+                  >
+                    {colorsExpanded ? '− Show less' : `+ Show more`}
+                  </button>
+                )}
               </div>
             )}
 
@@ -557,7 +568,7 @@ function HomeContent() {
                   )}
                 </div>
 
-                <div className="max-h-[calc(100vh-280px)] overflow-auto">
+                <div>
                   <table className="w-full text-sm border-collapse leading-tight min-w-[600px]">
                     <thead className="sticky top-0 z-10">
                       <tr className="border-b border-slate-600 text-left bg-slate-900">
