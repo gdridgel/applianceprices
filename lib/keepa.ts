@@ -42,6 +42,10 @@ const CATEGORY_CONFIG: Record<string, { categoryId: string, searchTerms: string[
   'Televisions': {
     categoryId: '172659',
     searchTerms: ['television', 'tv']
+  },
+  'Cell Phones': {
+    categoryId: '7072561011',
+    searchTerms: ['cell phone', 'smartphone', 'iphone', 'android phone']
   }
 }
 

@@ -1,4 +1,4 @@
-import { Snowflake, WashingMachine, Wind, Flame, IceCream, AirVent, UtensilsCrossed, Thermometer } from "lucide-react"
+import { Snowflake, WashingMachine, Wind, Flame, IceCream, AirVent, UtensilsCrossed, Thermometer, Smartphone } from "lucide-react"
 
 export type CategoryConfig = {
   icon: any
@@ -265,6 +265,31 @@ export const categoryConfig: Record<string, CategoryConfig> = {
       { key: "model", label: "Model" },
       { key: "type", label: "Type" },
       { key: "screen_size", label: "Size (in)" },
+      { key: "height_in", label: "H (in)" },
+      { key: "width_in", label: "W (in)" },
+      { key: "depth_in", label: "D (in)" },
+      { key: "weight_lbs", label: "Wt (lbs)" },
+      { key: "rating", label: "Rating" },
+      { key: "link", label: "Retailer Link" }
+    ]
+  },
+  "Cell Phones": {
+    icon: Smartphone,
+    slug: "cell-phones",
+    entity: "CellPhone",
+    title: "Cell Phones",
+    description: "Compare cell phone prices and features",
+    capacityField: "storage_gb",
+    capacityUnit: "GB",
+    types: ["Smartphone", "Basic Phone", "Rugged Phone", "Flip Phone", "Refurbished"],
+    featureFilters: ["5g", "wireless_charging", "water_resistant", "face_recognition"],
+    tableColumns: [
+      { key: "image", label: "Image\n(hover)" },
+      { key: "price", label: "Price" },
+      { key: "brand", label: "Brand" },
+      { key: "model", label: "Model" },
+      { key: "type", label: "Type" },
+      { key: "screen_size", label: "Screen (in)" },
       { key: "height_in", label: "H (in)" },
       { key: "width_in", label: "W (in)" },
       { key: "depth_in", label: "D (in)" },

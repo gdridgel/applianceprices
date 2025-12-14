@@ -17,7 +17,8 @@ const categories = [
   'Air Fryers',
   'Ice Makers',
   'Air Conditioners',
-  'Televisions'
+  'Televisions',
+  'Cell Phones'
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

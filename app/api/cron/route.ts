@@ -14,7 +14,8 @@ const CATEGORY_ROTATION = [
   ['Washers', 'Dryers'],
   ['Televisions', 'Air Fryers'],
   ['Ice Makers', 'Air Conditioners'],
-  ['REFRESH'] // Hour 5 = refresh cycle
+  ['Cell Phones'],
+  ['REFRESH'] // Hour 6 = refresh cycle
 ]
 
 // Token budget per run (targeting ~1,000 tokens per hour)

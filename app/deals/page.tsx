@@ -18,7 +18,8 @@ const CATEGORIES = [
   'Air Fryers',
   'Ice Makers',
   'Air Conditioners',
-  'Televisions'
+  'Televisions',
+  'Cell Phones'
 ]
 
 type Deal = {

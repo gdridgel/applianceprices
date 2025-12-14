@@ -442,8 +442,8 @@ function HomeContent() {
             {brands.length > 0 && (
               <div className="mb-5">
                 <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
-                <div className="space-y-1">
-                  {(brandsExpanded ? brands : brands.slice(0, BRANDS_COLLAPSED_COUNT)).map(brand => (
+                <div className={`space-y-1 ${brandsExpanded ? 'max-h-64 overflow-y-auto' : ''}`}>
+                  {(brandsExpanded ? brands.slice(0, 10) : brands.slice(0, BRANDS_COLLAPSED_COUNT)).map(brand => (
                     <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
@@ -460,7 +460,7 @@ function HomeContent() {
                     onClick={() => setBrandsExpanded(!brandsExpanded)}
                     className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
                   >
-                    {brandsExpanded ? '− Show less' : `+ Show ${brands.length - BRANDS_COLLAPSED_COUNT} more`}
+                    {brandsExpanded ? '− Show less' : `+ Show more`}
                   </button>
                 )}
               </div>
