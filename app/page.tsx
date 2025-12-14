@@ -146,7 +146,7 @@ function HomeContent() {
   useEffect(() => {
     if (urlCategory && allCategories.includes(urlCategory) && urlCategory !== selectedCategory) {
       setSelectedCategory(urlCategory)
-      setFilters({ types: [], brands: [], colors: [] })
+      setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
     }
   }, [urlCategory])
 
