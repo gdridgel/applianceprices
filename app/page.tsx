@@ -421,7 +421,7 @@ function HomeContent() {
             {brands.length > 0 && (
               <div className="mb-5">
                 <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
-                <div className="space-y-1 max-h-64 overflow-y-auto">
+                <div className="space-y-1">
                   {brands.map(brand => (
                     <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
@@ -461,7 +461,7 @@ function HomeContent() {
             {colors.length > 0 && (
               <div className="mb-5">
                 <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Color</label>
-                <div className="space-y-1 max-h-64 overflow-y-auto">
+                <div className="space-y-1">
                   {colors.map(color => (
                     <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
