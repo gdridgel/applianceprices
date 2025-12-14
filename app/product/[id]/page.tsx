@@ -331,24 +331,33 @@ export default function ProductPage() {
                       <td className="px-4 py-2">{product.weight_lbs} lbs</td>
                     </tr>
                   )}
-                  <tr className="border-t border-slate-700">
-                    <td className="px-4 py-2 text-slate-400">Energy Star</td>
-                    <td className="px-4 py-2">
-                      {product.energy_star ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-slate-500" />}
-                    </td>
-                  </tr>
-                  <tr className="border-t border-slate-700">
-                    <td className="px-4 py-2 text-slate-400">Ice Maker</td>
-                    <td className="px-4 py-2">
-                      {product.ice_maker ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-slate-500" />}
-                    </td>
-                  </tr>
-                  <tr className="border-t border-slate-700">
-                    <td className="px-4 py-2 text-slate-400">Water Dispenser</td>
-                    <td className="px-4 py-2">
-                      {product.water_dispenser ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-slate-500" />}
-                    </td>
-                  </tr>
+                  {/* Show Energy Star only for appliances that typically have it */}
+                  {['Refrigerators', 'Freezers', 'Dishwashers', 'Washers', 'Dryers', 'Air Conditioners'].includes(product.category) && product.energy_star !== null && (
+                    <tr className="border-t border-slate-700">
+                      <td className="px-4 py-2 text-slate-400">Energy Star</td>
+                      <td className="px-4 py-2">
+                        {product.energy_star ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-slate-500" />}
+                      </td>
+                    </tr>
+                  )}
+                  {/* Show Ice Maker only for Refrigerators and Freezers */}
+                  {['Refrigerators', 'Freezers'].includes(product.category) && product.ice_maker !== null && (
+                    <tr className="border-t border-slate-700">
+                      <td className="px-4 py-2 text-slate-400">Ice Maker</td>
+                      <td className="px-4 py-2">
+                        {product.ice_maker ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-slate-500" />}
+                      </td>
+                    </tr>
+                  )}
+                  {/* Show Water Dispenser only for Refrigerators */}
+                  {product.category === 'Refrigerators' && product.water_dispenser !== null && (
+                    <tr className="border-t border-slate-700">
+                      <td className="px-4 py-2 text-slate-400">Water Dispenser</td>
+                      <td className="px-4 py-2">
+                        {product.water_dispenser ? <Check className="w-4 h-4 text-green-500" /> : <X className="w-4 h-4 text-slate-500" />}
+                      </td>
+                    </tr>
+                  )}
                   {product.asin && (
                     <tr className="border-t border-slate-700">
                       <td className="px-4 py-2 text-slate-400">ASIN</td>
