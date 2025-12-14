@@ -15,8 +15,8 @@ function getAffiliateUrl(asin: string): string {
   return `https://www.amazon.com/dp/${asin}?tag=${AFFILIATE_TAG}`
 }
 
-// Words that indicate a product is a part/accessory, not a full appliance
-const PARTS_FILTER_WORDS = [
+// Default words that indicate a product is a part/accessory, not a full appliance
+const DEFAULT_FILTER_WORDS = [
   'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
   'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
   'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
@@ -28,10 +28,10 @@ const PARTS_FILTER_WORDS = [
 const MINIMUM_PRICE = 50.00
 
 // Check if a product title indicates it's a part/accessory
-function isPartOrAccessory(title: string): boolean {
+function isPartOrAccessory(title: string, filterWords: string[]): boolean {
   if (!title) return false
   const lowerTitle = title.toLowerCase()
-  return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
+  return filterWords.some(word => lowerTitle.includes(word.toLowerCase()))
 }
 
 // Image component with hover zoom
@@ -93,6 +93,7 @@ function HomeContent() {
   const [appliances, setAppliances] = useState<Appliance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [filterWords, setFilterWords] = useState<string[]>(DEFAULT_FILTER_WORDS)
   
   const config = categoryConfig[selectedCategory]
 
@@ -101,6 +102,20 @@ function HomeContent() {
     brands: [] as string[],
     colors: [] as string[],
   })
+
+  // Load filter words from Supabase on mount
+  useEffect(() => {
+    async function loadFilterWords() {
+      const { data } = await supabase
+        .from('filter_words')
+        .select('word')
+        .order('word')
+      if (data && data.length > 0) {
+        setFilterWords(data.map(d => d.word))
+      }
+    }
+    loadFilterWords()
+  }, [])
 
   // Sync URL with category changes
   useEffect(() => {
@@ -139,7 +154,7 @@ function HomeContent() {
           .not('price', 'is', null)
           .gte('price', MINIMUM_PRICE)
           .order('price', { ascending: true })
-          .limit(2000)
+          .range(0, 4999) // Get up to 5000 products
         
         if (error) throw error
         
@@ -148,7 +163,7 @@ function HomeContent() {
           // Skip deleted ASINs
           if (deletedAsins.has(item.asin)) return false
           // Skip parts/accessories based on title
-          if (isPartOrAccessory(item.title)) return false
+          if (isPartOrAccessory(item.title, filterWords)) return false
           return true
         })
         setAppliances(filtered)
@@ -161,7 +176,7 @@ function HomeContent() {
     }
     
     fetchAppliances()
-  }, [selectedCategory])
+  }, [selectedCategory, filterWords])
 
   // Priority brands to show at top (in alphabetical order)
   const PRIORITY_BRANDS = ['GE', 'Kenmore', 'LG', 'Maytag', 'Samsung', 'Whirlpool']

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { allCategories, categoryConfig } from '@/lib/categoryConfig'
-import { Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle, RefreshCw, Search, Zap, ChevronLeft, ChevronRight, Sparkles, Lock } from 'lucide-react'
+import { Trash2, Plus, Upload, Loader2, CheckCircle, AlertCircle, RefreshCw, Search, Zap, ChevronLeft, ChevronRight, Sparkles, Lock, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 
 // Admin password - set this in your environment variable
@@ -12,8 +12,8 @@ const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
 // Priority brands to show at top
 const PRIORITY_BRANDS = ['GE', 'Kenmore', 'LG', 'Maytag', 'Samsung', 'Whirlpool']
 
-// Words that indicate a product is a part/accessory, not a full appliance
-const PARTS_FILTER_WORDS = [
+// Default words that indicate a product is a part/accessory, not a full appliance
+const DEFAULT_FILTER_WORDS = [
   'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
   'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
   'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
@@ -24,10 +24,10 @@ const PARTS_FILTER_WORDS = [
 
 const MINIMUM_PRICE = 50.00
 
-function isPartOrAccessory(title: string): boolean {
+function isPartOrAccessory(title: string, filterWords: string[]): boolean {
   if (!title) return false
   const lowerTitle = title.toLowerCase()
-  return PARTS_FILTER_WORDS.some(word => lowerTitle.includes(word.toLowerCase()))
+  return filterWords.some(word => lowerTitle.includes(word.toLowerCase()))
 }
 
 // Login component
@@ -219,7 +219,55 @@ function AdminDashboard() {
     colors: [] as string[],
   })
 
+  // Filter words state
+  const [filterWords, setFilterWords] = useState<string[]>(DEFAULT_FILTER_WORDS)
+  const [newFilterWord, setNewFilterWord] = useState('')
+  const [showFilterWordsPanel, setShowFilterWordsPanel] = useState(false)
+
   const config = categoryConfig[selectedCategory]
+
+  // Load filter words from Supabase on mount
+  useEffect(() => {
+    async function loadFilterWords() {
+      const { data } = await supabase
+        .from('filter_words')
+        .select('word')
+        .order('word')
+      if (data && data.length > 0) {
+        setFilterWords(data.map(d => d.word))
+      }
+    }
+    loadFilterWords()
+  }, [])
+
+  // Add a filter word
+  const addFilterWord = async () => {
+    const word = newFilterWord.trim().toLowerCase()
+    if (!word || filterWords.includes(word)) return
+    
+    const { error } = await supabase
+      .from('filter_words')
+      .insert([{ word }])
+    
+    if (!error) {
+      setFilterWords(prev => [...prev, word].sort())
+      setNewFilterWord('')
+      fetchAppliances() // Refresh to apply new filter
+    }
+  }
+
+  // Remove a filter word
+  const removeFilterWord = async (word: string) => {
+    const { error } = await supabase
+      .from('filter_words')
+      .delete()
+      .eq('word', word)
+    
+    if (!error) {
+      setFilterWords(prev => prev.filter(w => w !== word))
+      fetchAppliances() // Refresh to apply new filter
+    }
+  }
 
   // Get unique brands from appliances
   const brands = useMemo(() => {
@@ -309,6 +357,7 @@ function AdminDashboard() {
     const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
     
     // Get all products with price >= $50 (same as homepage)
+    // Use range to get more than default 1000 limit
     const { data: allData, error } = await supabase
       .from('appliances')
       .select('*')
@@ -316,6 +365,7 @@ function AdminDashboard() {
       .gte('price', MINIMUM_PRICE)
       .not('price', 'is', null)
       .order('price', { ascending: true })
+      .range(0, 9999) // Get up to 10,000 products
     
     if (error) {
       setIsLoading(false)
@@ -325,7 +375,7 @@ function AdminDashboard() {
     // Filter out deleted ASINs and parts/accessories (same as homepage)
     const filtered = (allData || []).filter(item => {
       if (deletedAsins.has(item.asin)) return false
-      if (isPartOrAccessory(item.title)) return false
+      if (isPartOrAccessory(item.title, filterWords)) return false
       return true
     })
     
@@ -337,7 +387,7 @@ function AdminDashboard() {
     setAppliances(filtered.slice(from, to))
     
     setIsLoading(false)
-  }, [selectedCategory, currentPage])
+  }, [selectedCategory, currentPage, filterWords])
 
   useEffect(() => {
     fetchCounts()
@@ -770,10 +820,61 @@ function AdminDashboard() {
             <button onClick={handleCleanupDatabase} disabled={cleaning} className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50">
               {cleaning ? <><Loader2 className="w-4 h-4 animate-spin" />Cleaning...</> : <><Sparkles className="w-4 h-4" />Cleanup Parts & Low Price</>}
             </button>
+            <button onClick={() => setShowFilterWordsPanel(!showFilterWordsPanel)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+              <Filter className="w-4 h-4" />Filter Words ({filterWords.length})
+            </button>
             <button onClick={handleDeleteAll} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
               <Trash2 className="w-4 h-4" />Delete All
             </button>
           </div>
+          
+          {/* Filter Words Panel */}
+          {showFilterWordsPanel && (
+            <div className="mt-4 bg-slate-800 rounded-lg border border-slate-600 p-4">
+              <h3 className="text-white font-semibold mb-3">Filter Words (products with these words in title are hidden)</h3>
+              
+              {/* Add new word */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={newFilterWord}
+                  onChange={(e) => setNewFilterWord(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addFilterWord()}
+                  placeholder="Add new filter word..."
+                  className="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white text-sm"
+                />
+                <button
+                  onClick={addFilterWord}
+                  disabled={!newFilterWord.trim()}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
+                >
+                  Add
+                </button>
+              </div>
+              
+              {/* Word list */}
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                {filterWords.map(word => (
+                  <span 
+                    key={word} 
+                    className="inline-flex items-center gap-1 bg-slate-700 text-slate-200 px-2 py-1 rounded text-sm"
+                  >
+                    {word}
+                    <button
+                      onClick={() => removeFilterWord(word)}
+                      className="text-red-400 hover:text-red-300 ml-1"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              
+              <p className="text-xs text-slate-500 mt-3">
+                Note: Filter words are stored in database and sync across homepage/admin. Adding a word will hide matching products.
+              </p>
+            </div>
+          )}
           
           {importing && <div className="mt-4 flex items-center gap-2 text-blue-400"><Loader2 className="w-4 h-4 animate-spin" />Importing...</div>}
           
