@@ -356,24 +356,38 @@ function AdminDashboard() {
       .select('asin')
     const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
     
-    // Get all products with price >= $50 (same as homepage)
-    // Use range to get more than default 1000 limit
-    const { data: allData, error } = await supabase
-      .from('appliances')
-      .select('*')
-      .eq('category', selectedCategory)
-      .gte('price', MINIMUM_PRICE)
-      .not('price', 'is', null)
-      .order('price', { ascending: true })
-      .range(0, 9999) // Get up to 10,000 products
+    // Fetch all products in batches of 1000 to overcome Supabase limit
+    let allData: any[] = []
+    let from = 0
+    const batchSize = 1000
+    let hasMore = true
     
-    if (error) {
-      setIsLoading(false)
-      return
+    while (hasMore) {
+      const { data: batchData, error } = await supabase
+        .from('appliances')
+        .select('*')
+        .eq('category', selectedCategory)
+        .gte('price', MINIMUM_PRICE)
+        .not('price', 'is', null)
+        .order('price', { ascending: true })
+        .range(from, from + batchSize - 1)
+      
+      if (error) {
+        setIsLoading(false)
+        return
+      }
+      
+      if (batchData && batchData.length > 0) {
+        allData = [...allData, ...batchData]
+        from += batchSize
+        hasMore = batchData.length === batchSize
+      } else {
+        hasMore = false
+      }
     }
     
     // Filter out deleted ASINs and parts/accessories (same as homepage)
-    const filtered = (allData || []).filter(item => {
+    const filtered = allData.filter(item => {
       if (deletedAsins.has(item.asin)) return false
       if (isPartOrAccessory(item.title, filterWords)) return false
       return true
@@ -382,9 +396,9 @@ function AdminDashboard() {
     setTotalCount(filtered.length)
     
     // Paginate the filtered results
-    const from = currentPage * PAGE_SIZE
-    const to = from + PAGE_SIZE
-    setAppliances(filtered.slice(from, to))
+    const pageFrom = currentPage * PAGE_SIZE
+    const pageTo = pageFrom + PAGE_SIZE
+    setAppliances(filtered.slice(pageFrom, pageTo))
     
     setIsLoading(false)
   }, [selectedCategory, currentPage, filterWords])

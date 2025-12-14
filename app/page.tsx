@@ -97,11 +97,26 @@ function HomeContent() {
   
   const config = categoryConfig[selectedCategory]
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(0)
+  const PAGE_SIZE = 50
+
   const [filters, setFilters] = useState({
     types: [] as string[],
     brands: [] as string[],
     colors: [] as string[],
+    screenSizes: [] as string[],
   })
+
+  // TV Screen size ranges
+  const TV_SIZE_RANGES = [
+    { label: '32" and under', min: 0, max: 32 },
+    { label: '40" - 49"', min: 40, max: 49 },
+    { label: '50" - 59"', min: 50, max: 59 },
+    { label: '60" - 69"', min: 60, max: 69 },
+    { label: '70" - 79"', min: 70, max: 79 },
+    { label: '80" and up', min: 80, max: 999 },
+  ]
 
   // Load filter words from Supabase on mount
   useEffect(() => {
@@ -146,20 +161,35 @@ function HomeContent() {
           .select('asin')
         const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
         
-        // Then get appliances with minimum price filter
-        const { data, error } = await supabase
-          .from('appliances')
-          .select('*')
-          .eq('category', selectedCategory)
-          .not('price', 'is', null)
-          .gte('price', MINIMUM_PRICE)
-          .order('price', { ascending: true })
-          .range(0, 4999) // Get up to 5000 products
+        // Fetch all products in batches of 1000 to overcome Supabase limit
+        let allData: any[] = []
+        let from = 0
+        const batchSize = 1000
+        let hasMore = true
         
-        if (error) throw error
+        while (hasMore) {
+          const { data: batchData, error } = await supabase
+            .from('appliances')
+            .select('*')
+            .eq('category', selectedCategory)
+            .not('price', 'is', null)
+            .gte('price', MINIMUM_PRICE)
+            .order('price', { ascending: true })
+            .range(from, from + batchSize - 1)
+          
+          if (error) throw error
+          
+          if (batchData && batchData.length > 0) {
+            allData = [...allData, ...batchData]
+            from += batchSize
+            hasMore = batchData.length === batchSize
+          } else {
+            hasMore = false
+          }
+        }
         
         // Filter out deleted ASINs and parts/accessories
-        const filtered = (data || []).filter(item => {
+        const filtered = allData.filter(item => {
           // Skip deleted ASINs
           if (deletedAsins.has(item.asin)) return false
           // Skip parts/accessories based on title
@@ -232,24 +262,66 @@ function HomeContent() {
       if (filters.types.length && !filters.types.includes(item.type)) return false
       if (filters.brands.length && !filters.brands.includes(item.brand)) return false
       if (filters.colors.length && !filters.colors.includes(item.color)) return false
+      
+      // Screen size filter (for TVs)
+      if (filters.screenSizes.length > 0 && selectedCategory === 'Televisions') {
+        const screenSize = item.screen_size
+        if (!screenSize) return false
+        const matchesSize = filters.screenSizes.some(label => {
+          const range = TV_SIZE_RANGES.find(r => r.label === label)
+          if (!range) return false
+          return screenSize >= range.min && screenSize <= range.max
+        })
+        if (!matchesSize) return false
+      }
+      
       return true
     })
-  }, [appliances, filters])
+  }, [appliances, filters, selectedCategory])
 
-  const toggleFilter = (key: 'types' | 'brands' | 'colors', value: string) => {
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAppliances.length / PAGE_SIZE)
+  const paginatedAppliances = useMemo(() => {
+    const start = currentPage * PAGE_SIZE
+    return filteredAppliances.slice(start, start + PAGE_SIZE)
+  }, [filteredAppliances, currentPage])
+
+  // Screen size counts for TV filter
+  const screenSizeCounts = useMemo(() => {
+    if (selectedCategory !== 'Televisions') return {}
+    const counts: Record<string, number> = {}
+    TV_SIZE_RANGES.forEach(range => {
+      counts[range.label] = appliances.filter(item => {
+        const size = item.screen_size
+        return size && size >= range.min && size <= range.max
+      }).length
+    })
+    return counts
+  }, [appliances, selectedCategory])
+
+  const toggleFilter = (key: 'types' | 'brands' | 'colors' | 'screenSizes', value: string) => {
     setFilters(prev => ({
       ...prev,
       [key]: prev[key].includes(value)
         ? prev[key].filter(v => v !== value)
         : [...prev[key], value]
     }))
+    setCurrentPage(0) // Reset to first page when filter changes
   }
 
   const handleCategoryChange = (cat: string) => {
     setSelectedCategory(cat)
-    setFilters({ types: [], brands: [], colors: [] })
+    setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
+    setCurrentPage(0)
     // URL will be updated by the useEffect
   }
+
+  const clearAllFilters = () => {
+    setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
+    setCurrentPage(0)
+  }
+
+  const hasActiveFilters = filters.types.length > 0 || filters.brands.length > 0 || filters.colors.length > 0 || filters.screenSizes.length > 0
 
   const getDiscount = (item: Appliance) => {
     if (!item.list_price || item.list_price <= item.price) return null
@@ -384,10 +456,30 @@ function HomeContent() {
               </div>
             )}
 
+            {/* Screen Size filter - only for TVs */}
+            {selectedCategory === 'Televisions' && (
+              <div className="mb-5">
+                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Screen Size</label>
+                <div className="space-y-1">
+                  {TV_SIZE_RANGES.map(range => (
+                    <label key={range.label} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.screenSizes.includes(range.label)}
+                        onChange={() => toggleFilter('screenSizes', range.label)}
+                        className="rounded border-slate-500 bg-slate-700"
+                      />
+                      <span className="text-slate-300">{range.label} ({screenSizeCounts[range.label] || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Clear filters button */}
-            {(filters.types.length > 0 || filters.brands.length > 0 || filters.colors.length > 0) && (
+            {hasActiveFilters && (
               <button
-                onClick={() => setFilters({ types: [], brands: [], colors: [] })}
+                onClick={clearAllFilters}
                 className="w-full text-sm text-red-400 hover:text-red-300 py-2 border border-red-400/30 rounded hover:bg-red-400/10 transition"
               >
                 Clear All Filters
@@ -411,7 +503,7 @@ function HomeContent() {
           )}
 
           {/* Main table */}
-          <div className="flex-1 overflow-auto max-h-[calc(100vh-200px)]">
+          <div className="flex-1 overflow-auto">
             {isLoading ? (
               <div className="space-y-2">
                 {[...Array(10)].map((_, i) => (
@@ -424,90 +516,157 @@ function HomeContent() {
                 <p className="text-sm">Try changing your filters or add products to your database.</p>
               </div>
             ) : (
-              <table className="w-full text-sm border-collapse leading-tight min-w-[600px]">
-                <thead className="sticky top-0 z-10">
-                  <tr className="border-b border-slate-600 text-left bg-slate-900">
-                    {config.tableColumns.map(col => (
-                      <th key={col.key} className="font-semibold text-slate-300 text-sm px-2 py-2 bg-slate-900">
-                        {(col.label || '').split('\n').map((line, i, arr) => (
-                          <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+              <>
+                {/* Results count and pagination info */}
+                <div className="mb-3 flex justify-between items-center text-sm text-slate-400">
+                  <span>
+                    Showing {currentPage * PAGE_SIZE + 1} - {Math.min((currentPage + 1) * PAGE_SIZE, filteredAppliances.length)} of {filteredAppliances.length} products
+                  </span>
+                  {totalPages > 1 && (
+                    <span>Page {currentPage + 1} of {totalPages}</span>
+                  )}
+                </div>
+
+                <div className="max-h-[calc(100vh-280px)] overflow-auto">
+                  <table className="w-full text-sm border-collapse leading-tight min-w-[600px]">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="border-b border-slate-600 text-left bg-slate-900">
+                        {config.tableColumns.map(col => (
+                          <th key={col.key} className="font-semibold text-slate-300 text-sm px-2 py-2 bg-slate-900">
+                            {(col.label || '').split('\n').map((line, i, arr) => (
+                              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+                            ))}
+                          </th>
                         ))}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppliances.map((item) => {
-                    const discount = getDiscount(item)
-                    return (
-                      <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-900">
-                        {config.tableColumns.map(col => {
-                          if (col.key === 'image') {
-                            return (
-                              <td key={col.key} className="px-2 py-1">
-                                <ProductImage 
-                                  src={item.image_url} 
-                                  alt={item.title || `${item.brand} ${item.model}`}
-                                  link={`/product/${item.asin}`}
-                                />
-                              </td>
-                            )
-                          }
-                          if (col.key === 'price') {
-                            return (
-                              <td key={col.key} className="text-white px-2 py-1">
-                                ${item.price?.toLocaleString()}
-                                {discount && (
-                                  <span className="ml-1 text-green-500 text-xs">-{discount}%</span>
-                                )}
-                              </td>
-                            )
-                          }
-                          if (col.key === 'rating') {
-                            return (
-                              <td key={col.key} className="px-2 py-1">
-                                {item.rating ? (
-                                  <span className="flex items-center gap-0.5">
-                                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                    {item.rating.toFixed(1)}
-                                  </span>
-                                ) : '—'}
-                              </td>
-                            )
-                          }
-                          if (col.key === 'link') {
-                            return (
-                              <td key={col.key} className="px-2 py-1">
-                                <a
-                                  href={getAffiliateUrl(item.asin)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-400 hover:underline line-clamp-1"
-                                  title={item.title}
-                                >
-                                  {item.title || `${item.brand} ${item.model || ''}`}
-                                </a>
-                              </td>
-                            )
-                          }
-                          if (col.type === 'boolean') {
-                            return (
-                              <td key={col.key} className="text-slate-300 px-2 py-1 text-center">
-                                {item[col.key] ? <span className="text-yellow-400">★</span> : '—'}
-                              </td>
-                            )
-                          }
-                          return (
-                            <td key={col.key} className="text-slate-300 px-2 py-1">
-                              {item[col.key] ?? '—'}
-                            </td>
-                          )
-                        })}
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {paginatedAppliances.map((item) => {
+                        const discount = getDiscount(item)
+                        return (
+                          <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-900">
+                            {config.tableColumns.map(col => {
+                              if (col.key === 'image') {
+                                return (
+                                  <td key={col.key} className="px-2 py-1">
+                                    <ProductImage 
+                                      src={item.image_url} 
+                                      alt={item.title || `${item.brand} ${item.model}`}
+                                      link={`/product/${item.asin}`}
+                                    />
+                                  </td>
+                                )
+                              }
+                              if (col.key === 'price') {
+                                return (
+                                  <td key={col.key} className="text-white px-2 py-1">
+                                    ${item.price?.toLocaleString()}
+                                    {discount && (
+                                      <span className="ml-1 text-green-500 text-xs">-{discount}%</span>
+                                    )}
+                                  </td>
+                                )
+                              }
+                              if (col.key === 'rating') {
+                                return (
+                                  <td key={col.key} className="px-2 py-1">
+                                    {item.rating ? (
+                                      <span className="flex items-center gap-0.5">
+                                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                        {item.rating.toFixed(1)}
+                                      </span>
+                                    ) : '—'}
+                                  </td>
+                                )
+                              }
+                              if (col.key === 'link') {
+                                return (
+                                  <td key={col.key} className="px-2 py-1">
+                                    <a
+                                      href={getAffiliateUrl(item.asin)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-400 hover:underline line-clamp-1"
+                                      title={item.title}
+                                    >
+                                      {item.title || `${item.brand} ${item.model || ''}`}
+                                    </a>
+                                  </td>
+                                )
+                              }
+                              if (col.type === 'boolean') {
+                                return (
+                                  <td key={col.key} className="text-slate-300 px-2 py-1 text-center">
+                                    {item[col.key] ? <span className="text-yellow-400">★</span> : '—'}
+                                  </td>
+                                )
+                              }
+                              return (
+                                <td key={col.key} className="text-slate-300 px-2 py-1">
+                                  {item[col.key] ?? '—'}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination controls */}
+                {totalPages > 1 && (
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => setCurrentPage(0)} 
+                      disabled={currentPage === 0}
+                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    >
+                      First
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(p => Math.max(0, p - 1))} 
+                      disabled={currentPage === 0}
+                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    >
+                      ← Prev
+                    </button>
+                    
+                    <div className="flex items-center gap-1 px-2">
+                      <span className="text-sm text-slate-400">Page</span>
+                      <input 
+                        type="number" 
+                        min={1} 
+                        max={totalPages}
+                        value={currentPage + 1}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value) - 1
+                          if (page >= 0 && page < totalPages) {
+                            setCurrentPage(page)
+                          }
+                        }}
+                        className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-center text-slate-300"
+                      />
+                      <span className="text-sm text-slate-400">of {totalPages}</span>
+                    </div>
+                    
+                    <button 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} 
+                      disabled={currentPage >= totalPages - 1}
+                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    >
+                      Next →
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(totalPages - 1)} 
+                      disabled={currentPage >= totalPages - 1}
+                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    >
+                      Last
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
