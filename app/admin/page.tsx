@@ -1037,15 +1037,50 @@ function AdminDashboard() {
                 Delete {selectedIds.size} Selected
               </button>
             )}
-            {totalPages > 1 && (
-              <div className="flex items-center gap-2 ml-auto">
-                <button onClick={() => setCurrentPage(0)} disabled={currentPage === 0} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">First</button>
-                <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Prev</button>
-                <span className="text-sm px-4 text-slate-300">Page {currentPage + 1} of {totalPages}</span>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Next</button>
-                <button onClick={() => setCurrentPage(totalPages - 1)} disabled={currentPage >= totalPages - 1} className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Last</button>
-              </div>
-            )}
+            
+            {/* Pagination controls */}
+            <div className="flex items-center gap-4 ml-auto flex-wrap">
+              {/* Showing range */}
+              <span className="text-sm text-slate-400">
+                Showing {currentPage * PAGE_SIZE + 1} - {Math.min((currentPage + 1) * PAGE_SIZE, totalCount)} of {totalCount}
+              </span>
+              
+              {totalPages > 1 && (
+                <>
+                  {/* Navigation buttons */}
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setCurrentPage(0)} disabled={currentPage === 0} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">First</button>
+                    <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Page input */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-slate-400">Page</span>
+                      <input 
+                        type="number" 
+                        min={1} 
+                        max={totalPages}
+                        value={currentPage + 1}
+                        onChange={(e) => {
+                          const page = parseInt(e.target.value) - 1
+                          if (page >= 0 && page < totalPages) {
+                            setCurrentPage(page)
+                          }
+                        }}
+                        className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-center text-slate-300"
+                      />
+                      <span className="text-sm text-slate-400">of {totalPages}</span>
+                    </div>
+                    
+                    <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setCurrentPage(totalPages - 1)} disabled={currentPage >= totalPages - 1} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300">Last</button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
           </div>
         </div>
