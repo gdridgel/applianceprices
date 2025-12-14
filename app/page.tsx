@@ -57,7 +57,7 @@ function ProductImage({ src, alt, link }: { src: string | null, alt: string, lin
       </Link>
       {isHovered && src && (
         <div className="fixed z-[9999] bg-white p-2 rounded-lg shadow-2xl border border-slate-600" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <img src={src} alt={alt} className="w-64 h-64 object-contain" />
+          <img src={src} alt={alt} className="w-32 h-32 object-contain" />
         </div>
       )}
     </div>

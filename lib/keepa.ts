@@ -84,6 +84,10 @@ export interface KeepaProduct {
   waterDispenser: boolean
   type: string | null
   includedComponents: string | null
+  // Feature bullet points
+  feature1: string | null
+  feature2: string | null
+  feature3: string | null
 }
 
 // Convert Keepa price (in cents) to dollars
@@ -431,7 +435,11 @@ function parseKeepaProduct(item: any, category: string): KeepaProduct | null {
       iceMaker: specs.iceMaker,
       waterDispenser: specs.waterDispenser,
       type: specs.type,
-      includedComponents: item.includedComponents || null
+      includedComponents: item.includedComponents || null,
+      // Get first 3 feature bullet points
+      feature1: item.features?.[0] || null,
+      feature2: item.features?.[1] || null,
+      feature3: item.features?.[2] || null
     }
   } catch (error) {
     console.error('Error parsing Keepa product:', error)

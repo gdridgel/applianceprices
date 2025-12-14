@@ -34,6 +34,9 @@ type Appliance = {
   energy_star: boolean
   ice_maker: boolean
   water_dispenser: boolean
+  feature1: string | null
+  feature2: string | null
+  feature3: string | null
 }
 
 // Check if URL is a video
@@ -281,6 +284,33 @@ export default function ProductPage() {
               View on Amazon
               <ExternalLink className="w-4 h-4" />
             </a>
+            
+            {/* Key Features */}
+            {(product.feature1 || product.feature2 || product.feature3) && (
+              <div className="border border-slate-700 rounded-lg overflow-hidden mb-6">
+                <div className="bg-slate-800 px-4 py-2 font-semibold">Key Features</div>
+                <ul className="p-4 space-y-2">
+                  {product.feature1 && (
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-500 mt-0.5">•</span>
+                      <span className="text-slate-300">{product.feature1}</span>
+                    </li>
+                  )}
+                  {product.feature2 && (
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-500 mt-0.5">•</span>
+                      <span className="text-slate-300">{product.feature2}</span>
+                    </li>
+                  )}
+                  {product.feature3 && (
+                    <li className="flex items-start gap-2 text-sm">
+                      <span className="text-green-500 mt-0.5">•</span>
+                      <span className="text-slate-300">{product.feature3}</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
             
             {/* Specs Table */}
             <div className="border border-slate-700 rounded-lg overflow-hidden">

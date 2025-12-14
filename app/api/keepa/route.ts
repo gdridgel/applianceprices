@@ -80,6 +80,10 @@ function buildRecord(product: KeepaProduct) {
     ice_maker: product.iceMaker,
     water_dispenser: product.waterDispenser,
     type: product.type,
+    // Feature bullet points
+    feature1: product.feature1,
+    feature2: product.feature2,
+    feature3: product.feature3,
     updated_at: new Date().toISOString()
   }
 }
