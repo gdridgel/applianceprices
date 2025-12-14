@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { categoryConfig, allCategories } from '@/lib/categoryConfig'
-import { Star, Filter, X } from 'lucide-react'
+import { Star, Filter, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 // ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
@@ -70,6 +70,18 @@ type Appliance = {
 }
 
 export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
+  )
+}
+
+function HomeContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
