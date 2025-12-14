@@ -44,7 +44,24 @@ function isVideoUrl(url: string): boolean {
   if (!url) return false
   const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov']
   const lowerUrl = url.toLowerCase()
-  return videoExtensions.some(ext => lowerUrl.includes(ext)) || lowerUrl.includes('video')
+  return videoExtensions.some(ext => lowerUrl.includes(ext)) || lowerUrl.includes('video') || lowerUrl.includes('/vdp/')
+}
+
+// Check if URL is an Amazon video page (needs iframe)
+function isAmazonVideoUrl(url: string): boolean {
+  if (!url) return false
+  return url.includes('amazon.com/vdp/') || url.includes('amazon.com/gp/video')
+}
+
+// Get embeddable video URL
+function getEmbedVideoUrl(url: string): string {
+  if (!url) return url
+  // Amazon video pages - extract video ID and create embed URL
+  const vdpMatch = url.match(/\/vdp\/v\/([A-Za-z0-9]+)/)
+  if (vdpMatch) {
+    return `https://www.amazon.com/vdp/embed/${vdpMatch[1]}`
+  }
+  return url
 }
 
 // Generate JSON-LD structured data for product
@@ -196,11 +213,20 @@ export default function ProductPage() {
             <div className="bg-white rounded-lg p-4 mb-4">
               {selectedImage ? (
                 isVideoUrl(selectedImage) ? (
-                  <video 
-                    src={selectedImage}
-                    controls
-                    className="w-full h-96 object-contain"
-                  />
+                  isAmazonVideoUrl(selectedImage) ? (
+                    <iframe
+                      src={getEmbedVideoUrl(selectedImage)}
+                      className="w-full h-96"
+                      allowFullScreen
+                      allow="autoplay; encrypted-media"
+                    />
+                  ) : (
+                    <video 
+                      src={selectedImage}
+                      controls
+                      className="w-full h-96 object-contain"
+                    />
+                  )
                 ) : (
                   <img 
                     src={selectedImage} 
