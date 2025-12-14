@@ -143,37 +143,36 @@ function parseSizeDimensions(size: string | null): { width: number | null, depth
 
 // Get dimensions from Keepa's direct fields (more reliable than parsing size string)
 function getDirectDimensions(item: any): { width: number | null, depth: number | null, height: number | null, weight: number | null } {
-  // Try item dimensions first (product dimensions), then package dimensions
-  // Keepa stores these in different units depending on the field
+  // Keepa stores dimensions in MILLIMETERS and weight in GRAMS
   
   let width: number | null = null
   let depth: number | null = null  
   let height: number | null = null
   let weight: number | null = null
   
-  // Item dimensions (in hundredths of inches or mm)
+  // Item dimensions (in millimeters) - convert to inches (1 inch = 25.4 mm)
   if (item.itemWidth && item.itemWidth > 0) {
-    width = Math.round(item.itemWidth / 100 * 10) / 10
+    width = Math.round((item.itemWidth / 25.4) * 10) / 10
   }
   if (item.itemLength && item.itemLength > 0) {
-    depth = Math.round(item.itemLength / 100 * 10) / 10
+    depth = Math.round((item.itemLength / 25.4) * 10) / 10
   }
   if (item.itemHeight && item.itemHeight > 0) {
-    height = Math.round(item.itemHeight / 100 * 10) / 10
+    height = Math.round((item.itemHeight / 25.4) * 10) / 10
   }
   
-  // Fall back to package dimensions
+  // Fall back to package dimensions (also in millimeters)
   if (!width && item.packageWidth && item.packageWidth > 0) {
-    width = Math.round(item.packageWidth / 100 * 10) / 10
+    width = Math.round((item.packageWidth / 25.4) * 10) / 10
   }
   if (!depth && item.packageLength && item.packageLength > 0) {
-    depth = Math.round(item.packageLength / 100 * 10) / 10
+    depth = Math.round((item.packageLength / 25.4) * 10) / 10
   }
   if (!height && item.packageHeight && item.packageHeight > 0) {
-    height = Math.round(item.packageHeight / 100 * 10) / 10
+    height = Math.round((item.packageHeight / 25.4) * 10) / 10
   }
   
-  // Weight - item weight in grams
+  // Weight - item weight in grams, convert to pounds (1 lb = 453.592 g)
   if (item.itemWeight && item.itemWeight > 0) {
     weight = gramsToLbs(item.itemWeight)
   } else if (item.packageWeight && item.packageWeight > 0) {
