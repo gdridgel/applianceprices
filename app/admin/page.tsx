@@ -174,6 +174,7 @@ export default function AdminPage() {
 function AdminDashboard() {
   const [selectedCategory, setSelectedCategory] = useState('Refrigerators')
   const [appliances, setAppliances] = useState<Appliance[]>([])
+  const [allFilteredAppliances, setAllFilteredAppliances] = useState<Appliance[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [importing, setImporting] = useState(false)
@@ -393,15 +394,17 @@ function AdminDashboard() {
       return true
     })
     
+    setAllFilteredAppliances(filtered)
     setTotalCount(filtered.length)
-    
-    // Paginate the filtered results
+    setIsLoading(false)
+  }, [selectedCategory, filterWords])
+
+  // Update displayed appliances when page changes or data changes
+  useEffect(() => {
     const pageFrom = currentPage * PAGE_SIZE
     const pageTo = pageFrom + PAGE_SIZE
-    setAppliances(filtered.slice(pageFrom, pageTo))
-    
-    setIsLoading(false)
-  }, [selectedCategory, currentPage, filterWords])
+    setAppliances(allFilteredAppliances.slice(pageFrom, pageTo))
+  }, [allFilteredAppliances, currentPage])
 
   useEffect(() => {
     fetchCounts()

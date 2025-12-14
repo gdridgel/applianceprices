@@ -208,22 +208,42 @@ function HomeContent() {
     fetchAppliances()
   }, [selectedCategory, filterWords])
 
-  // Priority brands to show at top (in alphabetical order)
-  const PRIORITY_BRANDS = ['GE', 'Kenmore', 'LG', 'Maytag', 'Samsung', 'Whirlpool']
+  // State for expanding brand list
+  const [brandsExpanded, setBrandsExpanded] = useState(false)
+  const BRANDS_COLLAPSED_COUNT = 8
 
   const brands = useMemo(() => {
-    const brandSet = new Set(appliances.map(a => a.brand).filter(Boolean))
-    const allBrands = Array.from(brandSet).sort()
+    // Count products per brand
+    const brandCounts: Record<string, number> = {}
+    appliances.forEach(item => {
+      if (item.brand) {
+        brandCounts[item.brand] = (brandCounts[item.brand] || 0) + 1
+      }
+    })
     
-    // Separate priority brands from others
-    const priorityBrands = PRIORITY_BRANDS.filter(b => brandSet.has(b))
-    const otherBrands = allBrands.filter(b => !PRIORITY_BRANDS.includes(b))
-    
-    return [...priorityBrands, ...otherBrands]
+    // Sort by count descending
+    return Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a])
   }, [appliances])
 
+  // Valid color names to filter against model numbers appearing in color field
+  const isValidColor = (color: string): boolean => {
+    if (!color) return false
+    // Filter out values that look like model numbers (contain numbers or are too long)
+    if (/\d/.test(color)) return false
+    if (color.length > 30) return false
+    // Common color keywords
+    const colorKeywords = ['black', 'white', 'silver', 'gray', 'grey', 'red', 'blue', 'green', 'gold', 'brown', 'beige', 'cream', 'navy', 'stainless', 'steel', 'slate', 'graphite', 'bronze', 'copper', 'platinum', 'charcoal', 'ivory', 'wood', 'oak', 'walnut', 'cherry', 'mahogany', 'pink', 'purple', 'orange', 'yellow', 'teal', 'burgundy', 'tan', 'natural', 'clear', 'transparent', 'matte', 'glossy', 'brushed', 'chrome', 'nickel', 'bisque', 'almond', 'onyx', 'pearl', 'midnight', 'titanium', 'sand', 'mocha', 'espresso']
+    const lowerColor = color.toLowerCase()
+    return colorKeywords.some(keyword => lowerColor.includes(keyword))
+  }
+
   const colors = useMemo(() => {
-    const colorSet = new Set(appliances.map(a => a.color).filter(Boolean))
+    const colorSet = new Set(
+      appliances
+        .map(a => a.color)
+        .filter(Boolean)
+        .filter(isValidColor)
+    )
     return Array.from(colorSet).sort()
   }, [appliances])
 
@@ -313,6 +333,7 @@ function HomeContent() {
     setSelectedCategory(cat)
     setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
     setCurrentPage(0)
+    setBrandsExpanded(false)
     // URL will be updated by the useEffect
   }
 
@@ -417,12 +438,12 @@ function HomeContent() {
               </div>
             )}
 
-            {/* Brand filter - expanded */}
+            {/* Brand filter - collapsible */}
             {brands.length > 0 && (
               <div className="mb-5">
                 <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
                 <div className="space-y-1">
-                  {brands.map(brand => (
+                  {(brandsExpanded ? brands : brands.slice(0, BRANDS_COLLAPSED_COUNT)).map(brand => (
                     <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
                       <input
                         type="checkbox"
@@ -434,6 +455,14 @@ function HomeContent() {
                     </label>
                   ))}
                 </div>
+                {brands.length > BRANDS_COLLAPSED_COUNT && (
+                  <button
+                    onClick={() => setBrandsExpanded(!brandsExpanded)}
+                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
+                  >
+                    {brandsExpanded ? '− Show less' : `+ Show ${brands.length - BRANDS_COLLAPSED_COUNT} more`}
+                  </button>
+                )}
               </div>
             )}
 
