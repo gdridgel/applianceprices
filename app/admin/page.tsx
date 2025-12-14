@@ -1132,7 +1132,7 @@ function AdminDashboard() {
                         <ProductImage src={item.image_url} alt={item.title || ''} />
                       </td>
                       <td className="px-4 py-3 text-slate-300">{item.brand || '—'}</td>
-                      <td className="px-4 py-3 text-slate-300 max-w-xs truncate" title={item.title}>{item.title || '—'}</td>
+                      <td className="px-4 py-3 text-slate-300 max-w-md">{item.title || '—'}</td>
                       <td className="px-4 py-3 text-slate-300">{item.price ? `$${item.price}` : '—'}</td>
                       <td className="px-4 py-3 text-slate-300">{item.type || '—'}</td>
                       <td className="px-4 py-3 text-slate-300">{item.rating ? `${item.rating}★` : '—'}</td>
