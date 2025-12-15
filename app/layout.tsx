@@ -61,6 +61,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#000000" />
+        <meta name="impact-site-verification" content="58dac4ff-75e8-4276-8a12-d92542752fbd" />
         
         {/* JSON-LD Structured Data - Website */}
         <script
