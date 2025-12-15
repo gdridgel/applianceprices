@@ -458,29 +458,48 @@ function AdminDashboard() {
     
     setBulkDeleting(true)
     try {
-      // Get ASINs for selected items
-      const selectedAppliances = filteredAppliances.filter(a => selectedIds.has(a.id))
+      // Get ASINs for selected items - search in allFilteredAppliances (not just current page)
+      const selectedAppliances = allFilteredAppliances.filter(a => selectedIds.has(a.id))
       const asinsToBlock = selectedAppliances.map(a => a.asin).filter(Boolean)
+      
+      console.log('Deleting items:', Array.from(selectedIds))
+      console.log('ASINs to block:', asinsToBlock)
       
       // Add to deleted_asins
       if (asinsToBlock.length > 0) {
-        await supabase.from('deleted_asins').upsert(
+        const { error: upsertError } = await supabase.from('deleted_asins').upsert(
           asinsToBlock.map(asin => ({ asin })),
           { onConflict: 'asin' }
         )
+        if (upsertError) {
+          console.error('Error adding to deleted_asins:', upsertError)
+        }
       }
       
       // Delete from appliances
       const idsArray = Array.from(selectedIds)
       for (let i = 0; i < idsArray.length; i += 100) {
         const batch = idsArray.slice(i, i + 100)
-        await supabase.from('appliances').delete().in('id', batch)
+        const { error: deleteError, count } = await supabase
+          .from('appliances')
+          .delete()
+          .in('id', batch)
+        
+        if (deleteError) {
+          console.error('Error deleting batch:', deleteError)
+          alert(`Error deleting: ${deleteError.message}`)
+        } else {
+          console.log(`Deleted batch of ${batch.length} items`)
+        }
       }
       
       // Refresh
       await fetchAppliances()
       await fetchCounts()
       setSelectedIds(new Set())
+    } catch (err: any) {
+      console.error('Bulk delete error:', err)
+      alert(`Delete failed: ${err.message}`)
     } finally {
       setBulkDeleting(false)
     }
