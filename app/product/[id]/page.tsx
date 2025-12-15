@@ -37,6 +37,10 @@ type Appliance = {
   feature1: string | null
   feature2: string | null
   feature3: string | null
+  // Home Depot data
+  homedepot_product_id: string | null
+  homedepot_price: number | null
+  homedepot_url: string | null
 }
 
 // Check if URL is a video
@@ -300,16 +304,66 @@ export default function ProductPage() {
               </div>
             </div>
             
-            {/* Buy Button */}
-            <a
-              href={`https://www.amazon.com/dp/${product.asin}?tag=${AFFILIATE_TAG}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 mb-8"
-            >
-              View on Amazon
-              <ExternalLink className="w-4 h-4" />
-            </a>
+            {/* Price Comparison */}
+            <div className="border border-slate-700 rounded-lg overflow-hidden mb-6">
+              <div className="bg-slate-800 px-4 py-2 font-semibold">Compare Prices</div>
+              <div className="divide-y divide-slate-700">
+                {/* Amazon */}
+                <a
+                  href={`https://www.amazon.com/dp/${product.asin}?tag=${AFFILIATE_TAG}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 h-8 bg-white rounded px-2 flex items-center justify-center">
+                      <span className="text-black font-bold text-sm">amazon</span>
+                    </div>
+                    <span className="text-green-500 text-sm">✓ In Stock</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-white">${product.price?.toLocaleString()}</span>
+                    <ExternalLink className="w-4 h-4 text-slate-400" />
+                  </div>
+                </a>
+                
+                {/* Home Depot */}
+                {product.homedepot_product_id && product.homedepot_price ? (
+                  <a
+                    href={product.homedepot_url || `https://www.homedepot.com/p/${product.homedepot_product_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-20 h-8 bg-orange-500 rounded px-2 flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">HOME DEPOT</span>
+                      </div>
+                      <span className="text-green-500 text-sm">✓ Available</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xl font-bold ${product.homedepot_price < product.price ? 'text-green-400' : 'text-white'}`}>
+                        ${product.homedepot_price.toLocaleString()}
+                      </span>
+                      {product.homedepot_price < product.price && (
+                        <span className="text-green-500 text-xs font-semibold">LOWEST</span>
+                      )}
+                      <ExternalLink className="w-4 h-4 text-slate-400" />
+                    </div>
+                  </a>
+                ) : (
+                  <div className="flex items-center justify-between p-4 opacity-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-20 h-8 bg-orange-500/50 rounded px-2 flex items-center justify-center">
+                        <span className="text-white/70 font-bold text-xs">HOME DEPOT</span>
+                      </div>
+                      <span className="text-slate-500 text-sm">Not available</span>
+                    </div>
+                    <span className="text-slate-500">—</span>
+                  </div>
+                )}
+              </div>
+            </div>
             
             {/* Key Features */}
             {(product.feature1 || product.feature2 || product.feature3) && (
