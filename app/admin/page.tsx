@@ -225,6 +225,15 @@ function AdminDashboard() {
   const [newFilterWord, setNewFilterWord] = useState('')
   const [showFilterWordsPanel, setShowFilterWordsPanel] = useState(false)
 
+  // Home Depot state
+  const [showHomeDepotPanel, setShowHomeDepotPanel] = useState(false)
+  const [hdSearchQuery, setHdSearchQuery] = useState('')
+  const [hdSearchResults, setHdSearchResults] = useState<any[]>([])
+  const [hdSearching, setHdSearching] = useState(false)
+  const [hdMatching, setHdMatching] = useState(false)
+  const [hdMatchResult, setHdMatchResult] = useState<any>(null)
+  const [hdSelectedAsin, setHdSelectedAsin] = useState<string | null>(null)
+
   const config = categoryConfig[selectedCategory]
 
   // Load filter words from Supabase on mount
@@ -711,6 +720,88 @@ function AdminDashboard() {
     setFullSyncing(false)
   }
 
+  // Home Depot functions
+  const handleHdSearch = async () => {
+    if (!hdSearchQuery.trim()) return
+    setHdSearching(true)
+    setHdSearchResults([])
+    try {
+      const res = await fetch('/api/homedepot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'search', query: hdSearchQuery, zip: '36608' })
+      })
+      const data = await res.json()
+      if (data.success && data.products) {
+        setHdSearchResults(data.products)
+      }
+    } catch (error) {
+      console.error('Home Depot search error:', error)
+    }
+    setHdSearching(false)
+  }
+
+  const handleHdLinkProduct = async (hdProductId: string) => {
+    if (!hdSelectedAsin) return
+    try {
+      const res = await fetch('/api/homedepot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'link-product', asin: hdSelectedAsin, productId: hdProductId, zip: '36608' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setHdMatchResult({ success: true, message: `Linked to Home Depot product` })
+        setHdSelectedAsin(null)
+        setHdSearchResults([])
+        setHdSearchQuery('')
+        await fetchAppliances()
+      } else {
+        setHdMatchResult({ success: false, error: data.error })
+      }
+    } catch (error: any) {
+      setHdMatchResult({ success: false, error: error.message })
+    }
+  }
+
+  const handleHdAutoMatch = async (asin: string) => {
+    setHdMatching(true)
+    setHdMatchResult(null)
+    try {
+      const res = await fetch('/api/homedepot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'auto-match', asin, zip: '36608' })
+      })
+      const data = await res.json()
+      setHdMatchResult(data)
+      if (data.matched) {
+        await fetchAppliances()
+      }
+    } catch (error: any) {
+      setHdMatchResult({ success: false, error: error.message })
+    }
+    setHdMatching(false)
+  }
+
+  const handleHdBulkMatch = async () => {
+    setHdMatching(true)
+    setHdMatchResult(null)
+    try {
+      const res = await fetch('/api/homedepot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bulk-match', category: selectedCategory, limit: 10, zip: '36608' })
+      })
+      const data = await res.json()
+      setHdMatchResult(data)
+      await fetchAppliances()
+    } catch (error: any) {
+      setHdMatchResult({ success: false, error: error.message })
+    }
+    setHdMatching(false)
+  }
+
   const handleLogout = () => {
     sessionStorage.removeItem('adminAuth')
     window.location.reload()
@@ -919,6 +1010,135 @@ function AdminDashboard() {
           )}
         </div>
 
+        {/* Home Depot Integration */}
+        <div className="bg-slate-900 rounded-lg border border-slate-700 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded font-bold">HOME DEPOT</span>
+              Price Comparison
+            </h2>
+            <button 
+              onClick={() => setShowHomeDepotPanel(!showHomeDepotPanel)} 
+              className="text-sm text-slate-400 hover:text-white"
+            >
+              {showHomeDepotPanel ? 'Hide' : 'Show'} Panel
+            </button>
+          </div>
+
+          {showHomeDepotPanel && (
+            <div className="space-y-4">
+              {/* Bulk Match */}
+              <div className="flex flex-wrap gap-4 items-center">
+                <button 
+                  onClick={handleHdBulkMatch} 
+                  disabled={hdMatching} 
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                >
+                  {hdMatching ? <><Loader2 className="w-4 h-4 animate-spin" />Matching...</> : <><Search className="w-4 h-4" />Auto-Match 10 Products</>}
+                </button>
+                <span className="text-sm text-slate-400">
+                  Automatically find Home Depot matches for {selectedCategory} products
+                </span>
+              </div>
+
+              {/* Search & Manual Link */}
+              <div className="border-t border-slate-700 pt-4">
+                <h3 className="text-sm font-semibold text-slate-300 mb-3">Manual Search & Link</h3>
+                
+                {/* Select Amazon Product */}
+                <div className="mb-3">
+                  <label className="block text-xs text-slate-400 mb-1">1. Select Amazon product to link:</label>
+                  <select 
+                    value={hdSelectedAsin || ''} 
+                    onChange={(e) => setHdSelectedAsin(e.target.value || null)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white text-sm"
+                  >
+                    <option value="">-- Select a product --</option>
+                    {appliances.filter(a => !a.homedepot_product_id).slice(0, 50).map(a => (
+                      <option key={a.asin} value={a.asin}>
+                        {a.brand} {a.model} - ${a.price} ({a.asin})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Search Home Depot */}
+                <div className="mb-3">
+                  <label className="block text-xs text-slate-400 mb-1">2. Search Home Depot:</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={hdSearchQuery}
+                      onChange={(e) => setHdSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleHdSearch()}
+                      placeholder="Search by brand, model, or keyword..."
+                      className="flex-1 bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white text-sm"
+                    />
+                    <button
+                      onClick={handleHdSearch}
+                      disabled={hdSearching || !hdSearchQuery.trim()}
+                      className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 text-sm"
+                    >
+                      {hdSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search Results */}
+                {hdSearchResults.length > 0 && (
+                  <div className="bg-slate-800 rounded-lg border border-slate-600 max-h-64 overflow-y-auto">
+                    <div className="text-xs text-slate-400 px-3 py-2 border-b border-slate-600">
+                      3. Select Home Depot product to link:
+                    </div>
+                    {hdSearchResults.map((product, i) => (
+                      <div 
+                        key={i} 
+                        className="flex items-center justify-between p-3 border-b border-slate-700 hover:bg-slate-700/50"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-white truncate">{product.name}</div>
+                          <div className="text-xs text-slate-400">
+                            {product.brand} | ${product.price} | ID: {product.productId}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleHdLinkProduct(product.productId)}
+                          disabled={!hdSelectedAsin}
+                          className="ml-2 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
+                        >
+                          Link
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Match Result */}
+              {hdMatchResult && (
+                <div className={`p-4 rounded-lg ${hdMatchResult.success || hdMatchResult.matched ? 'bg-green-900/50 border border-green-700' : 'bg-yellow-900/50 border border-yellow-700'}`}>
+                  {hdMatchResult.matched ? (
+                    <div className="flex items-center gap-2 text-green-400">
+                      <CheckCircle className="w-5 h-5" />
+                      Matched! {hdMatchResult.homedepot?.name} - ${hdMatchResult.homedepot?.price}
+                    </div>
+                  ) : hdMatchResult.success ? (
+                    <div className="flex items-center gap-2 text-green-400">
+                      <CheckCircle className="w-5 h-5" />
+                      {hdMatchResult.message || `Processed: ${hdMatchResult.matched} matched, ${hdMatchResult.failed} failed`}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-yellow-400">
+                      <AlertCircle className="w-5 h-5" />
+                      {hdMatchResult.message || hdMatchResult.error || 'No match found'}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Add Product Form */}
         {showAddForm && (
           <div className="bg-slate-900 rounded-lg border border-slate-700 p-6 mb-6">
@@ -1113,6 +1333,7 @@ function AdminDashboard() {
                     <th className="text-left px-4 py-3 text-slate-300">Brand</th>
                     <th className="text-left px-4 py-3 text-slate-300">Title</th>
                     <th className="text-left px-4 py-3 text-slate-300">Price</th>
+                    <th className="text-left px-4 py-3 text-slate-300">HD Price</th>
                     <th className="text-left px-4 py-3 text-slate-300">Type</th>
                     <th className="text-left px-4 py-3 text-slate-300">Rating</th>
                   </tr>
@@ -1134,6 +1355,22 @@ function AdminDashboard() {
                       <td className="px-4 py-3 text-slate-300">{item.brand || '—'}</td>
                       <td className="px-4 py-3 text-slate-300 max-w-md">{item.title || '—'}</td>
                       <td className="px-4 py-3 text-slate-300">{item.price ? `$${item.price}` : '—'}</td>
+                      <td className="px-4 py-3">
+                        {item.homedepot_price ? (
+                          <span className={`font-medium ${item.homedepot_price < item.price ? 'text-green-400' : 'text-orange-400'}`}>
+                            ${item.homedepot_price}
+                          </span>
+                        ) : (
+                          <button 
+                            onClick={() => handleHdAutoMatch(item.asin)}
+                            disabled={hdMatching}
+                            className="text-xs text-slate-500 hover:text-orange-400"
+                            title="Find Home Depot match"
+                          >
+                            Find
+                          </button>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-slate-300">{item.type || '—'}</td>
                       <td className="px-4 py-3 text-slate-300">{item.rating ? `${item.rating}★` : '—'}</td>
                     </tr>
