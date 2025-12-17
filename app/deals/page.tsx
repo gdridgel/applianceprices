@@ -123,10 +123,16 @@ export default function DealsPage() {
             <span className="text-slate-400 text-sm hidden sm:block">Smart Shoppers Start Here</span>
           </Link>
           <div className="flex items-center gap-4">
+            <Link href="/" className="text-slate-400 hover:text-slate-300 text-sm font-medium">
+              Compare
+            </Link>
             <div className="flex items-center gap-2 text-green-400">
               <TrendingDown className="w-5 h-5" />
               <span className="font-medium">Deals</span>
             </div>
+            <Link href="/blog" className="text-slate-400 hover:text-slate-300 text-sm font-medium">
+              📚 Guides
+            </Link>
           </div>
         </div>
       </header>
@@ -285,14 +291,29 @@ export default function DealsPage() {
             ))}
           </div>
         )}
-
-        {/* Affiliate Disclosure */}
-        <div className="mt-8 pt-4 border-t border-slate-800">
-          <p className="text-xs text-slate-500 text-center">
-            As an Amazon Associate we earn from qualifying purchases. Prices and availability subject to change.
-          </p>
-        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800 bg-slate-950 mt-8">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-wrap justify-center gap-6 mb-6 text-sm">
+            <Link href="/" className="text-slate-400 hover:text-white">Compare Prices</Link>
+            <Link href="/category/refrigerators" className="text-slate-400 hover:text-white">Refrigerators</Link>
+            <Link href="/category/washers" className="text-slate-400 hover:text-white">Washers</Link>
+            <Link href="/category/televisions" className="text-slate-400 hover:text-white">TVs</Link>
+            <Link href="/blog" className="text-slate-400 hover:text-white">Buying Guides</Link>
+            <Link href="/blog/best-time-to-buy-appliances" className="text-slate-400 hover:text-white">Best Time to Buy</Link>
+          </div>
+          <div className="text-center">
+            <p className="text-slate-500 text-sm">
+              © {new Date().getFullYear()} Appliance Prices. All rights reserved.
+            </p>
+            <p className="text-slate-600 text-xs mt-2">
+              As an Amazon Associate and Home Depot affiliate, we earn from qualifying purchases.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -367,6 +367,9 @@ function HomeContent() {
             <Link href="/deals" className="flex items-center gap-1 text-green-400 hover:text-green-300 text-sm font-medium">
               🔥 Deals
             </Link>
+            <Link href="/blog" className="text-slate-400 hover:text-slate-300 text-sm font-medium">
+              📚 Guides
+            </Link>
             <Link href="/admin" className="text-slate-400 hover:text-slate-300 text-sm">
               Admin
             </Link>
@@ -712,6 +715,74 @@ function HomeContent() {
           </div>
         </div>
       </div>
+
+      {/* SEO Footer with Internal Links */}
+      <footer className="border-t border-slate-800 bg-slate-950 mt-8">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          {/* Category Links */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-10">
+            <div>
+              <h3 className="font-semibold text-white mb-3">Kitchen</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/category/refrigerators" className="text-slate-400 hover:text-white">Refrigerators</Link></li>
+                <li><Link href="/category/freezers" className="text-slate-400 hover:text-white">Freezers</Link></li>
+                <li><Link href="/category/dishwashers" className="text-slate-400 hover:text-white">Dishwashers</Link></li>
+                <li><Link href="/category/ranges" className="text-slate-400 hover:text-white">Ranges & Stoves</Link></li>
+                <li><Link href="/category/air-fryers" className="text-slate-400 hover:text-white">Air Fryers</Link></li>
+                <li><Link href="/category/ice-makers" className="text-slate-400 hover:text-white">Ice Makers</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white mb-3">Laundry</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/category/washers" className="text-slate-400 hover:text-white">Washing Machines</Link></li>
+                <li><Link href="/category/dryers" className="text-slate-400 hover:text-white">Dryers</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white mb-3">Cooling</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/category/air-conditioners" className="text-slate-400 hover:text-white">Air Conditioners</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white mb-3">Electronics</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/category/televisions" className="text-slate-400 hover:text-white">Televisions</Link></li>
+                <li><Link href="/category/cell-phones" className="text-slate-400 hover:text-white">Cell Phones</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white mb-3">Buying Guides</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/blog/best-time-to-buy-appliances" className="text-slate-400 hover:text-white">Best Time to Buy</Link></li>
+                <li><Link href="/blog/refrigerator-buying-guide" className="text-slate-400 hover:text-white">Refrigerator Guide</Link></li>
+                <li><Link href="/blog/washer-dryer-buying-guide" className="text-slate-400 hover:text-white">Washer & Dryer Guide</Link></li>
+                <li><Link href="/blog/smart-tv-buying-guide" className="text-slate-400 hover:text-white">TV Buying Guide</Link></li>
+                <li><Link href="/blog" className="text-blue-400 hover:text-blue-300">All Guides →</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-white mb-3">Resources</h3>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/deals" className="text-slate-400 hover:text-white">Today's Deals</Link></li>
+                <li><Link href="/blog/amazon-vs-home-depot-appliances" className="text-slate-400 hover:text-white">Amazon vs Home Depot</Link></li>
+                <li><Link href="/blog/energy-star-appliances-worth-it" className="text-slate-400 hover:text-white">Energy Star Guide</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom bar */}
+          <div className="border-t border-slate-800 pt-8 text-center">
+            <p className="text-slate-500 text-sm">
+              © {new Date().getFullYear()} Appliance Prices. All rights reserved.
+            </p>
+            <p className="text-slate-600 text-xs mt-2">
+              As an Amazon Associate and Home Depot affiliate, we earn from qualifying purchases.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
