@@ -6,19 +6,29 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Categories list (duplicated here to avoid client component import)
+// Categories list
 const categories = [
-  'Refrigerators',
-  'Freezers', 
-  'Dishwashers',
-  'Ranges',
-  'Washers',
-  'Dryers',
-  'Air Fryers',
-  'Ice Makers',
-  'Air Conditioners',
-  'Televisions',
-  'Cell Phones'
+  'refrigerators',
+  'freezers', 
+  'dishwashers',
+  'ranges',
+  'washers',
+  'dryers',
+  'air-fryers',
+  'ice-makers',
+  'air-conditioners',
+  'televisions',
+  'cell-phones'
+]
+
+// Blog posts
+const blogPosts = [
+  'best-time-to-buy-appliances',
+  'refrigerator-buying-guide',
+  'amazon-vs-home-depot-appliances',
+  'energy-star-appliances-worth-it',
+  'washer-dryer-buying-guide',
+  'smart-tv-buying-guide'
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -38,14 +48,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'hourly',
       priority: 0.9,
     },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
   ]
   
-  // Category pages
+  // Category pages (SEO-friendly URLs)
   const categoryPages: MetadataRoute.Sitemap = categories.map(category => ({
-    url: `${baseUrl}/?category=${encodeURIComponent(category)}`,
+    url: `${baseUrl}/category/${category}`,
     lastModified: new Date(),
     changeFrequency: 'daily',
-    priority: 0.8,
+    priority: 0.9,
+  }))
+  
+  // Blog posts
+  const blogPages: MetadataRoute.Sitemap = blogPosts.map(slug => ({
+    url: `${baseUrl}/blog/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly',
+    priority: 0.7,
   }))
   
   // Product pages
@@ -69,5 +93,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Error generating product sitemap:', error)
   }
   
-  return [...staticPages, ...categoryPages, ...productPages]
+  return [...staticPages, ...categoryPages, ...blogPages, ...productPages]
 }
