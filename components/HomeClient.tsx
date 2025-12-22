@@ -102,19 +102,22 @@ type Appliance = {
   [key: string]: any
 }
 
+// This is the exported component - it provides the Suspense boundary
 export default function HomeClient() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        <span className="ml-2 text-slate-400">Loading products...</span>
       </div>
     }>
-      <HomeContent />
+      <HomeClientInner />
     </Suspense>
   )
 }
 
-function HomeContent() {
+// Inner component that uses useSearchParams
+function HomeClientInner() {
   var searchParams = useSearchParams()
   var router = useRouter()
   
@@ -359,7 +362,6 @@ function HomeContent() {
     sidebarClasses += " -translate-x-full md:translate-x-0"
   }
 
-  // Get columns based on category
   function getTableColumns() {
     var cat = selectedCategory
     if (cat === 'Refrigerators') {
