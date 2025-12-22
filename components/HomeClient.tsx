@@ -508,6 +508,14 @@ function HomeContent() {
                 </span>
               </div>
 
+              {/* Column Headers */}
+              <div className="hidden md:flex items-center gap-4 py-2 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                <div className="w-16">Image</div>
+                <div className="flex-1">Product</div>
+                <div className="w-32 text-right">Price</div>
+                <div className="w-20">Action</div>
+              </div>
+
               <div>
                 {paginatedAppliances.map(function(item) {
                   var discount = getDiscount(item)
