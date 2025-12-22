@@ -4,16 +4,16 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { categoryConfig, allCategories } from '@/lib/categoryConfig'
-import { Star, Filter, X, Loader2 } from 'lucide-react'
+import { Star, Filter, X, Loader2, Check } from 'lucide-react'
 import Link from 'next/link'
 
-const AFFILIATE_TAG = 'appliances04d-20'
+var AFFILIATE_TAG = 'appliances04d-20'
 
 function getAffiliateUrl(asin: string): string {
   return 'https://www.amazon.com/dp/' + asin + '?tag=' + AFFILIATE_TAG
 }
 
-const DEFAULT_FILTER_WORDS = [
+var DEFAULT_FILTER_WORDS = [
   'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
   'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
   'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
@@ -22,18 +22,18 @@ const DEFAULT_FILTER_WORDS = [
   'ice tray', 'water line', 'defrost', 'relay', 'start device'
 ]
 
-const MINIMUM_PRICE = 50.00
+var MINIMUM_PRICE = 50.00
 
 function isPartOrAccessory(title: string, filterWords: string[]): boolean {
   if (!title) return false
-  const lowerTitle = title.toLowerCase()
+  var lowerTitle = title.toLowerCase()
   return filterWords.some(function(word) { 
     return lowerTitle.includes(word.toLowerCase()) 
   })
 }
 
 function ProductImage(props: { src: string | null, alt: string, link: string }) {
-  const [isHovered, setIsHovered] = useState(false)
+  var [isHovered, setIsHovered] = useState(false)
   
   return (
     <div 
@@ -46,10 +46,10 @@ function ProductImage(props: { src: string | null, alt: string, link: string }) 
           <img 
             src={props.src} 
             alt={props.alt}
-            className="w-16 h-16 object-contain cursor-pointer bg-white rounded"
+            className="w-12 h-12 object-contain cursor-pointer bg-white rounded"
           />
         ) : (
-          <div className="w-16 h-16 bg-slate-700 rounded" />
+          <div className="w-12 h-12 bg-slate-700 rounded" />
         )}
       </Link>
       {isHovered && props.src && (
@@ -57,11 +57,18 @@ function ProductImage(props: { src: string | null, alt: string, link: string }) 
           className="fixed z-[9999] bg-white p-2 rounded-lg shadow-2xl border border-slate-600" 
           style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
         >
-          <img src={props.src} alt={props.alt} className="w-32 h-32 object-contain" />
+          <img src={props.src} alt={props.alt} className="w-48 h-48 object-contain" />
         </div>
       )}
     </div>
   )
+}
+
+function BooleanCell(props: { value: boolean | null | undefined }) {
+  if (props.value === true) {
+    return <Check className="w-4 h-4 text-green-500" />
+  }
+  return <span className="text-slate-600">—</span>
 }
 
 type Appliance = {
@@ -78,6 +85,20 @@ type Appliance = {
   review_count: number
   image_url: string
   screen_size: string
+  width_inches: number
+  height_inches: number
+  depth_inches: number
+  total_capacity_cuft: number
+  fridge_capacity_cuft: number
+  freezer_capacity_cuft: number
+  capacity_cuft: number
+  capacity_quarts: number
+  btu: number
+  cooling_sqft: number
+  energy_star: boolean
+  ice_maker: boolean
+  water_dispenser: boolean
+  smart_features: boolean
   [key: string]: any
 }
 
@@ -94,31 +115,31 @@ export default function HomeClient() {
 }
 
 function HomeContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
+  var searchParams = useSearchParams()
+  var router = useRouter()
   
-  const urlCategory = searchParams.get('category')
-  const initialCategory = (urlCategory && allCategories.includes(urlCategory)) ? urlCategory : 'Refrigerators'
+  var urlCategory = searchParams.get('category')
+  var initialCategory = (urlCategory && allCategories.includes(urlCategory)) ? urlCategory : 'Refrigerators'
   
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  const [appliances, setAppliances] = useState<Appliance[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [filterWords, setFilterWords] = useState<string[]>(DEFAULT_FILTER_WORDS)
+  var [selectedCategory, setSelectedCategory] = useState(initialCategory)
+  var [appliances, setAppliances] = useState<Appliance[]>([])
+  var [isLoading, setIsLoading] = useState(true)
+  var [sidebarOpen, setSidebarOpen] = useState(false)
+  var [filterWords, setFilterWords] = useState<string[]>(DEFAULT_FILTER_WORDS)
   
-  const config = categoryConfig[selectedCategory]
+  var config = categoryConfig[selectedCategory]
 
-  const PAGE_SIZE = 50
-  const [currentPage, setCurrentPage] = useState(0)
+  var PAGE_SIZE = 50
+  var [currentPage, setCurrentPage] = useState(0)
 
-  const [filters, setFilters] = useState({
+  var [filters, setFilters] = useState({
     types: [] as string[],
     brands: [] as string[],
     colors: [] as string[],
     screenSizes: [] as string[],
   })
 
-  const TV_SIZE_RANGES = [
+  var TV_SIZE_RANGES = [
     { label: '32" and under', min: 0, max: 32 },
     { label: '40" - 43"', min: 40, max: 43 },
     { label: '50" - 55"', min: 50, max: 55 },
@@ -128,7 +149,7 @@ function HomeContent() {
 
   useEffect(function() {
     async function loadFilterWords() {
-      const result = await supabase
+      var result = await supabase
         .from('filter_words')
         .select('word')
         .order('word')
@@ -205,8 +226,8 @@ function HomeContent() {
 
   var COLLAPSED_COUNT = 10
   var EXPANDED_COUNT = 20
-  const [brandsExpanded, setBrandsExpanded] = useState(false)
-  const [colorsExpanded, setColorsExpanded] = useState(false)
+  var [brandsExpanded, setBrandsExpanded] = useState(false)
+  var [colorsExpanded, setColorsExpanded] = useState(false)
 
   var brandsData = useMemo(function() {
     var counts: Record<string, number> = {}
@@ -321,15 +342,153 @@ function HomeContent() {
     return Math.round(((item.list_price - item.price) / item.list_price) * 100)
   }
 
-  var sidebarClasses = "fixed md:relative inset-y-0 left-0 z-50 md:z-0 w-72 md:w-56 bg-black md:bg-transparent transform transition-transform duration-300 ease-in-out md:flex-shrink-0 p-4 md:p-0 md:sticky md:top-20 md:max-h-screen md:overflow-y-auto"
+  function formatDimension(val: number | null | undefined) {
+    if (val === null || val === undefined) return '—'
+    return val.toFixed(1) + '"'
+  }
+
+  function formatCapacity(val: number | null | undefined, unit: string) {
+    if (val === null || val === undefined) return '—'
+    return val.toFixed(1) + ' ' + unit
+  }
+
+  var sidebarClasses = "fixed md:relative inset-y-0 left-0 z-50 md:z-0 w-72 md:w-48 bg-black md:bg-transparent transform transition-transform duration-300 ease-in-out md:flex-shrink-0 p-4 md:p-0 md:sticky md:top-20 md:max-h-screen md:overflow-y-auto"
   if (sidebarOpen) {
     sidebarClasses += " translate-x-0"
   } else {
     sidebarClasses += " -translate-x-full md:translate-x-0"
   }
 
+  // Get columns based on category
+  function getTableColumns() {
+    var cat = selectedCategory
+    if (cat === 'Refrigerators') {
+      return ['image', 'price', 'brand', 'model', 'type', 'total_capacity', 'fridge_capacity', 'freezer_capacity', 'height', 'depth', 'energy_star', 'ice_maker', 'water_dispenser', 'rating', 'action']
+    } else if (cat === 'Washers') {
+      return ['image', 'price', 'brand', 'model', 'type', 'capacity', 'height', 'depth', 'energy_star', 'smart', 'rating', 'action']
+    } else if (cat === 'Dryers') {
+      return ['image', 'price', 'brand', 'model', 'type', 'capacity', 'height', 'depth', 'energy_star', 'smart', 'rating', 'action']
+    } else if (cat === 'Air Fryers') {
+      return ['image', 'price', 'brand', 'model', 'type', 'capacity_qt', 'wattage', 'rating', 'action']
+    } else if (cat === 'Ice Makers') {
+      return ['image', 'price', 'brand', 'model', 'type', 'daily_production', 'storage', 'rating', 'action']
+    } else if (cat === 'Air Conditioners') {
+      return ['image', 'price', 'brand', 'model', 'type', 'btu', 'cooling_sqft', 'energy_star', 'rating', 'action']
+    } else if (cat === 'Televisions') {
+      return ['image', 'price', 'brand', 'model', 'screen_size', 'type', 'smart', 'rating', 'action']
+    } else if (cat === 'Dishwashers') {
+      return ['image', 'price', 'brand', 'model', 'type', 'width', 'height', 'depth', 'energy_star', 'rating', 'action']
+    } else if (cat === 'Freezers') {
+      return ['image', 'price', 'brand', 'model', 'type', 'capacity', 'height', 'depth', 'energy_star', 'rating', 'action']
+    } else if (cat === 'Ranges') {
+      return ['image', 'price', 'brand', 'model', 'type', 'width', 'rating', 'action']
+    } else if (cat === 'Cell Phones') {
+      return ['image', 'price', 'brand', 'model', 'storage', 'screen_size', 'rating', 'action']
+    }
+    return ['image', 'price', 'brand', 'model', 'type', 'rating', 'action']
+  }
+
+  function getColumnHeader(col: string) {
+    var headers: Record<string, string> = {
+      'image': '',
+      'price': 'Price',
+      'brand': 'Brand',
+      'model': 'Model',
+      'type': 'Type',
+      'total_capacity': 'Total',
+      'fridge_capacity': 'Fridge',
+      'freezer_capacity': 'Freezer',
+      'capacity': 'Capacity',
+      'capacity_qt': 'Capacity',
+      'height': 'H',
+      'width': 'W',
+      'depth': 'D',
+      'energy_star': 'E★',
+      'ice_maker': 'Ice',
+      'water_dispenser': 'Water',
+      'smart': 'Smart',
+      'rating': '★',
+      'action': '',
+      'btu': 'BTU',
+      'cooling_sqft': 'Sq.Ft',
+      'wattage': 'Watts',
+      'daily_production': 'lbs/day',
+      'storage': 'Storage',
+      'screen_size': 'Screen',
+    }
+    return headers[col] || col
+  }
+
+  function renderCell(item: Appliance, col: string) {
+    var productLink = '/product/' + item.asin
+    
+    if (col === 'image') {
+      return <ProductImage src={item.image_url} alt={item.title || ''} link={productLink} />
+    }
+    if (col === 'price') {
+      var discount = getDiscount(item)
+      return (
+        <div className="text-right">
+          <div className="font-bold text-green-400">${item.price ? item.price.toFixed(0) : '—'}</div>
+          {discount && <div className="text-xs text-green-500">-{discount}%</div>}
+        </div>
+      )
+    }
+    if (col === 'brand') return <span className="text-xs">{item.brand || '—'}</span>
+    if (col === 'model') {
+      return (
+        <Link href={productLink} className="text-xs text-blue-400 hover:underline truncate block max-w-[120px]">
+          {item.model || item.title?.substring(0, 30) || '—'}
+        </Link>
+      )
+    }
+    if (col === 'type') return <span className="text-xs">{item.type || '—'}</span>
+    if (col === 'total_capacity') return <span className="text-xs">{formatCapacity(item.total_capacity_cuft, 'cu.ft.')}</span>
+    if (col === 'fridge_capacity') return <span className="text-xs">{formatCapacity(item.fridge_capacity_cuft, '')}</span>
+    if (col === 'freezer_capacity') return <span className="text-xs">{formatCapacity(item.freezer_capacity_cuft, '')}</span>
+    if (col === 'capacity') return <span className="text-xs">{formatCapacity(item.capacity_cuft, 'cu.ft.')}</span>
+    if (col === 'capacity_qt') return <span className="text-xs">{formatCapacity(item.capacity_quarts, 'qt')}</span>
+    if (col === 'height') return <span className="text-xs">{formatDimension(item.height_inches)}</span>
+    if (col === 'width') return <span className="text-xs">{formatDimension(item.width_inches)}</span>
+    if (col === 'depth') return <span className="text-xs">{formatDimension(item.depth_inches)}</span>
+    if (col === 'energy_star') return <BooleanCell value={item.energy_star} />
+    if (col === 'ice_maker') return <BooleanCell value={item.ice_maker} />
+    if (col === 'water_dispenser') return <BooleanCell value={item.water_dispenser} />
+    if (col === 'smart') return <BooleanCell value={item.smart_features} />
+    if (col === 'btu') return <span className="text-xs">{item.btu ? item.btu.toLocaleString() : '—'}</span>
+    if (col === 'cooling_sqft') return <span className="text-xs">{item.cooling_sqft || '—'}</span>
+    if (col === 'wattage') return <span className="text-xs">{item.wattage || '—'}</span>
+    if (col === 'daily_production') return <span className="text-xs">{item.daily_production_lbs || '—'}</span>
+    if (col === 'storage') return <span className="text-xs">{item.storage_capacity_lbs ? item.storage_capacity_lbs + ' lbs' : '—'}</span>
+    if (col === 'screen_size') return <span className="text-xs">{item.screen_size ? item.screen_size + '"' : '—'}</span>
+    if (col === 'rating') {
+      if (!item.rating) return <span className="text-slate-600">—</span>
+      return (
+        <div className="flex items-center gap-0.5 text-xs">
+          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+          <span>{item.rating.toFixed(1)}</span>
+        </div>
+      )
+    }
+    if (col === 'action') {
+      return (
+        <a 
+          href={getAffiliateUrl(item.asin)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-2 py-1 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-medium rounded"
+        >
+          View
+        </a>
+      )
+    }
+    return <span className="text-xs">—</span>
+  }
+
+  var tableColumns = getTableColumns()
+
   return (
-    <div className="px-4 py-6">
+    <div className="px-4 py-4">
       <div className="md:hidden mb-4">
         <button 
           onClick={function() { setSidebarOpen(true) }}
@@ -340,7 +499,7 @@ function HomeContent() {
         </button>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex gap-4">
         <div className={sidebarClasses}>
           <div className="md:hidden flex justify-end mb-4">
             <button onClick={function() { setSidebarOpen(false) }}>
@@ -348,12 +507,12 @@ function HomeContent() {
             </button>
           </div>
 
-          <div className="mb-5">
-            <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Category</label>
+          <div className="mb-4">
+            <label className="text-xs font-semibold text-slate-400 mb-1 block uppercase tracking-wide">Category</label>
             <select 
               value={selectedCategory} 
               onChange={function(e) { handleCategoryChange(e.target.value) }}
-              className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white"
+              className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-sm text-white"
             >
               {allCategories.map(function(cat) {
                 return (
@@ -366,19 +525,19 @@ function HomeContent() {
           </div>
 
           {config.types && config.types.length > 0 && (
-            <div className="mb-5">
-              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Type</label>
-              <div className="space-y-1">
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-slate-400 mb-1 block uppercase tracking-wide">Type</label>
+              <div className="space-y-0.5 max-h-40 overflow-y-auto">
                 {config.types.map(function(type) {
                   return (
-                    <label key={type} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                    <label key={type} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-800 px-1 py-0.5 rounded">
                       <input
                         type="checkbox"
                         checked={filters.types.includes(type)}
                         onChange={function() { toggleFilter('types', type) }}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                        className="w-3 h-3 rounded border-slate-600 bg-black text-green-500"
                       />
-                      <span className="text-slate-300">{type} ({typeCounts[type] || 0})</span>
+                      <span className="text-slate-300 truncate">{type} ({typeCounts[type] || 0})</span>
                     </label>
                   )
                 })}
@@ -387,19 +546,19 @@ function HomeContent() {
           )}
 
           {brands.length > 0 && (
-            <div className="mb-5">
-              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
-              <div className="space-y-1">
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-slate-400 mb-1 block uppercase tracking-wide">Brand</label>
+              <div className="space-y-0.5 max-h-40 overflow-y-auto">
                 {(brandsExpanded ? brands.slice(0, EXPANDED_COUNT) : brands.slice(0, COLLAPSED_COUNT)).map(function(brand) {
                   return (
-                    <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                    <label key={brand} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-800 px-1 py-0.5 rounded">
                       <input
                         type="checkbox"
                         checked={filters.brands.includes(brand)}
                         onChange={function() { toggleFilter('brands', brand) }}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                        className="w-3 h-3 rounded border-slate-600 bg-black text-green-500"
                       />
-                      <span className="text-slate-300">{brand} ({brandCounts[brand] || 0})</span>
+                      <span className="text-slate-300 truncate">{brand} ({brandCounts[brand] || 0})</span>
                     </label>
                   )
                 })}
@@ -407,26 +566,26 @@ function HomeContent() {
               {brands.length > COLLAPSED_COUNT && (
                 <button
                   onClick={function() { setBrandsExpanded(!brandsExpanded) }}
-                  className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
+                  className="mt-1 text-xs text-blue-400 hover:text-blue-300"
                 >
-                  {brandsExpanded ? 'Show less' : 'Show more'}
+                  {brandsExpanded ? 'Less' : 'More'}
                 </button>
               )}
             </div>
           )}
 
           {selectedCategory === 'Televisions' && (
-            <div className="mb-5">
-              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Screen Size</label>
-              <div className="space-y-1">
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-slate-400 mb-1 block uppercase tracking-wide">Screen Size</label>
+              <div className="space-y-0.5">
                 {TV_SIZE_RANGES.map(function(range) {
                   return (
-                    <label key={range.label} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
+                    <label key={range.label} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-800 px-1 py-0.5 rounded">
                       <input
                         type="checkbox"
                         checked={filters.screenSizes.includes(range.label)}
                         onChange={function() { toggleFilter('screenSizes', range.label) }}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                        className="w-3 h-3 rounded border-slate-600 bg-black text-green-500"
                       />
                       <span className="text-slate-300">{range.label} ({screenSizeCounts[range.label] || 0})</span>
                     </label>
@@ -436,45 +595,16 @@ function HomeContent() {
             </div>
           )}
 
-          {colors.length > 0 && (
-            <div className="mb-5">
-              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Color</label>
-              <div className="space-y-1">
-                {(colorsExpanded ? colors.slice(0, EXPANDED_COUNT) : colors.slice(0, COLLAPSED_COUNT)).map(function(color) {
-                  return (
-                    <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.colors.includes(color)}
-                        onChange={function() { toggleFilter('colors', color) }}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                      />
-                      <span className="text-slate-300">{color} ({colorCounts[color] || 0})</span>
-                    </label>
-                  )
-                })}
-              </div>
-              {colors.length > COLLAPSED_COUNT && (
-                <button
-                  onClick={function() { setColorsExpanded(!colorsExpanded) }}
-                  className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
-                >
-                  {colorsExpanded ? 'Show less' : 'Show more'}
-                </button>
-              )}
-            </div>
-          )}
-
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="w-full py-2 text-sm text-red-400 hover:text-red-300 border border-red-400/30 rounded"
+              className="w-full py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-400/30 rounded"
             >
-              Clear All Filters
+              Clear Filters
             </button>
           )}
 
-          <div className="mt-6 pt-4 border-t border-slate-700">
+          <div className="mt-4 pt-3 border-t border-slate-700">
             <p className="text-xs text-slate-500 leading-relaxed">
               As an Amazon Associate we earn from qualifying purchases.
             </p>
@@ -498,128 +628,77 @@ function HomeContent() {
           ) : filteredAppliances.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <p className="text-lg mb-2">No products found</p>
-              <p className="text-sm">Try changing your filters or add products to your database.</p>
+              <p className="text-sm">Try changing your filters.</p>
             </div>
           ) : (
             <React.Fragment>
-              <div className="mb-3 flex justify-between items-center text-sm text-slate-400">
-                <span>
-                  Showing {currentPage * PAGE_SIZE + 1} - {Math.min((currentPage + 1) * PAGE_SIZE, filteredAppliances.length)} of {filteredAppliances.length} products
-                </span>
+              <div className="mb-2 text-xs text-slate-400">
+                Showing {currentPage * PAGE_SIZE + 1}-{Math.min((currentPage + 1) * PAGE_SIZE, filteredAppliances.length)} of {filteredAppliances.length}
               </div>
 
-              {/* Column Headers */}
-              <div className="hidden md:flex items-center gap-4 py-2 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                <div className="w-16">Image</div>
-                <div className="flex-1">Product</div>
-                <div className="w-32 text-right">Price</div>
-                <div className="w-20">Action</div>
-              </div>
-
-              <div>
-                {paginatedAppliances.map(function(item) {
-                  var discount = getDiscount(item)
-                  var productLink = '/product/' + item.asin
-                  return (
-                    <div key={item.id} className="flex items-center gap-4 py-3 border-b border-slate-800 hover:bg-slate-900/50">
-                      <ProductImage 
-                        src={item.image_url} 
-                        alt={item.title || ''} 
-                        link={productLink}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <Link href={productLink} className="hover:text-blue-400">
-                          <h3 className="text-sm font-medium truncate">{item.title}</h3>
-                        </Link>
-                        <div className="text-xs text-slate-400 mt-1">
-                          {item.brand && <span>{item.brand}</span>}
-                          {item.model && <span> - {item.model}</span>}
-                          {item.type && <span> - {item.type}</span>}
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="flex items-center gap-2">
-                          {discount && (
-                            <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded">
-                              -{discount}%
-                            </span>
-                          )}
-                          <span className="text-lg font-bold text-green-400">
-                            ${item.price ? item.price.toFixed(2) : '0.00'}
-                          </span>
-                        </div>
-                        {item.list_price && item.list_price > item.price && (
-                          <div className="text-xs text-slate-500 line-through">
-                            ${item.list_price.toFixed(2)}
-                          </div>
-                        )}
-                        {item.rating && (
-                          <div className="flex items-center gap-1 text-xs text-slate-400 mt-1 justify-end">
-                            <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                            {item.rating.toFixed(1)}
-                            {item.review_count && (
-                              <span className="text-slate-500">({item.review_count.toLocaleString()})</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <a 
-                        href={getAffiliateUrl(item.asin)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-medium rounded"
-                      >
-                        View
-                      </a>
-                    </div>
-                  )
-                })}
+              <div className="border border-slate-700 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-800 sticky top-0">
+                      <tr>
+                        {tableColumns.map(function(col) {
+                          return (
+                            <th key={col} className="px-2 py-2 text-left text-xs font-semibold text-slate-400 whitespace-nowrap">
+                              {getColumnHeader(col)}
+                            </th>
+                          )
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {paginatedAppliances.map(function(item, idx) {
+                        return (
+                          <tr key={item.id} className={idx % 2 === 0 ? 'bg-slate-900/50' : 'bg-slate-900/30'}>
+                            {tableColumns.map(function(col) {
+                              return (
+                                <td key={col} className="px-2 py-2 whitespace-nowrap">
+                                  {renderCell(item, col)}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-center gap-2">
+                <div className="mt-3 flex items-center justify-center gap-2">
                   <button 
                     onClick={function() { setCurrentPage(0) }} 
                     disabled={currentPage === 0}
-                    className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300"
                   >
                     First
                   </button>
                   <button 
                     onClick={function() { setCurrentPage(Math.max(0, currentPage - 1)) }} 
                     disabled={currentPage === 0}
-                    className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300"
                   >
                     Prev
                   </button>
-                  <div className="flex items-center gap-1 px-2">
-                    <span className="text-sm text-slate-400">Page</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={totalPages}
-                      value={currentPage + 1}
-                      onChange={function(e) {
-                        var page = parseInt(e.target.value) - 1
-                        if (page >= 0 && page < totalPages) {
-                          setCurrentPage(page)
-                        }
-                      }}
-                      className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-center text-slate-300"
-                    />
-                    <span className="text-sm text-slate-400">of {totalPages}</span>
-                  </div>
+                  <span className="text-xs text-slate-400">
+                    Page {currentPage + 1} of {totalPages}
+                  </span>
                   <button 
                     onClick={function() { setCurrentPage(Math.min(totalPages - 1, currentPage + 1)) }} 
                     disabled={currentPage >= totalPages - 1}
-                    className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300"
                   >
                     Next
                   </button>
                   <button 
                     onClick={function() { setCurrentPage(totalPages - 1) }} 
                     disabled={currentPage >= totalPages - 1}
-                    className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300"
                   >
                     Last
                   </button>
