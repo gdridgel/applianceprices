@@ -2,7 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://appliance-prices.com'),
+  metadataBase: new URL('https://www.appliance-prices.com'),
   title: {
     default: 'Appliance Prices - Compare Refrigerators, Washers, TVs & More',
     template: '%s | Appliance Prices'
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://appliance-prices.com',
+    url: 'https://www.appliance-prices.com',
     siteName: 'Appliance Prices',
     title: 'Appliance Prices - Compare Refrigerators, Washers, TVs & More',
     description: 'Compare prices on refrigerators, washers, dryers, dishwashers, TVs and more. Find the best deals on major appliances.',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://appliance-prices.com',
+    canonical: 'https://www.appliance-prices.com',
   },
 }
 
@@ -71,13 +71,13 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
               name: 'Appliance Prices',
-              url: 'https://appliance-prices.com',
+              url: 'https://www.appliance-prices.com',
               description: 'Compare prices on refrigerators, washers, dryers, dishwashers, TVs and more.',
               potentialAction: {
                 '@type': 'SearchAction',
                 target: {
                   '@type': 'EntryPoint',
-                  urlTemplate: 'https://appliance-prices.com/?search={search_term_string}'
+                  urlTemplate: 'https://www.appliance-prices.com/?search={search_term_string}'
                 },
                 'query-input': 'required name=search_term_string'
               }
@@ -93,8 +93,8 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: 'Appliance Prices',
-              url: 'https://appliance-prices.com',
-              logo: 'https://appliance-prices.com/logo.png',
+              url: 'https://www.appliance-prices.com',
+              logo: 'https://www.appliance-prices.com/logo.png',
               sameAs: []
             })
           }}
