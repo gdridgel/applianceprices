@@ -1,360 +1,18 @@
-'use client'
-
-import React, { useState, useMemo, useEffect, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { categoryConfig, allCategories } from '@/lib/categoryConfig'
-import { Star, Filter, X, Loader2 } from 'lucide-react'
+import { Metadata } from 'next'
 import Link from 'next/link'
+import { Suspense } from 'react'
+import HomeClient from '@/components/HomeClient'
 
-// ⬇️ PUT YOUR AMAZON AFFILIATE TAG HERE ⬇️
-const AFFILIATE_TAG = 'appliances04d-20'
-
-// Helper to add affiliate tag to Amazon URLs
-function getAffiliateUrl(asin: string): string {
-  return `https://www.amazon.com/dp/${asin}?tag=${AFFILIATE_TAG}`
+export const metadata: Metadata = {
+  title: 'Compare Appliance Prices - Refrigerators, Washers, TVs & More | Appliance Prices',
+  description: 'Compare prices on refrigerators, washers, dryers, dishwashers, TVs and more from Amazon and Home Depot. Find the best deals on major appliances with real-time price tracking.',
+  keywords: ['appliance prices', 'refrigerator deals', 'washer prices', 'dryer deals', 'TV prices', 'dishwasher prices', 'compare appliances', 'best appliance deals', 'amazon appliances', 'home depot appliances'],
 }
 
-// Default words that indicate a product is a part/accessory, not a full appliance
-const DEFAULT_FILTER_WORDS = [
-  'filter', 'light', 'cord', 'capacitor', 'hinge', 'valve', 'thermostat', 
-  'spring', 'light bulb', 'hose', 'clamp', 'drain hose', 'heater', 'damper', 
-  'cover', 'sensor', 'tube light', 'replacement', 'overload', 'assembly', 
-  'switch', 'circuit', 'board', 'gasket', 'motherboard', 'timer', 'seal',
-  'compressor', 'fan motor', 'door handle', 'shelf', 'drawer', 'bin',
-  'ice tray', 'water line', 'defrost', 'relay', 'start device'
-]
-
-const MINIMUM_PRICE = 50.00
-
-// Check if a product title indicates it's a part/accessory
-function isPartOrAccessory(title: string, filterWords: string[]): boolean {
-  if (!title) return false
-  const lowerTitle = title.toLowerCase()
-  return filterWords.some(word => lowerTitle.includes(word.toLowerCase()))
-}
-
-// Image component with hover zoom
-function ProductImage({ src, alt, link }: { src: string | null, alt: string, link: string }) {
-  const [isHovered, setIsHovered] = useState(false)
-  
-  return (
-    <div 
-      className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <Link href={link}>
-        {src ? (
-          <img 
-            src={src} 
-            alt={alt}
-            className="w-16 h-16 object-contain cursor-pointer bg-white rounded"
-          />
-        ) : (
-          <div className="w-16 h-16 bg-slate-700 rounded" />
-        )}
-      </Link>
-      {isHovered && src && (
-        <div className="fixed z-[9999] bg-white p-2 rounded-lg shadow-2xl border border-slate-600" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <img src={src} alt={alt} className="w-32 h-32 object-contain" />
-        </div>
-      )}
-    </div>
-  )
-}
-
-type Appliance = {
-  id: string
-  [key: string]: any
-}
-
-export default function Home() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
-  )
-}
-
-function HomeContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  
-  // Get category from URL or default to Refrigerators
-  const urlCategory = searchParams.get('category')
-  const initialCategory = urlCategory && allCategories.includes(urlCategory) ? urlCategory : 'Refrigerators'
-  
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory)
-  const [appliances, setAppliances] = useState<Appliance[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [filterWords, setFilterWords] = useState<string[]>(DEFAULT_FILTER_WORDS)
-  
-  const config = categoryConfig[selectedCategory]
-
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(0)
-  const PAGE_SIZE = 50
-
-  const [filters, setFilters] = useState({
-    types: [] as string[],
-    brands: [] as string[],
-    colors: [] as string[],
-    screenSizes: [] as string[],
-  })
-
-  // TV Screen size ranges
-  const TV_SIZE_RANGES = [
-    { label: '32" and under', min: 0, max: 32 },
-    { label: '40" - 49"', min: 40, max: 49 },
-    { label: '50" - 59"', min: 50, max: 59 },
-    { label: '60" - 69"', min: 60, max: 69 },
-    { label: '70" - 79"', min: 70, max: 79 },
-    { label: '80" and up', min: 80, max: 999 },
-  ]
-
-  // Load filter words from Supabase on mount
-  useEffect(() => {
-    async function loadFilterWords() {
-      const { data } = await supabase
-        .from('filter_words')
-        .select('word')
-        .order('word')
-      if (data && data.length > 0) {
-        setFilterWords(data.map(d => d.word))
-      }
-    }
-    loadFilterWords()
-  }, [])
-
-  // Sync URL with category changes
-  useEffect(() => {
-    if (urlCategory !== selectedCategory) {
-      const newUrl = selectedCategory === 'Refrigerators' 
-        ? '/' 
-        : `/?category=${encodeURIComponent(selectedCategory)}`
-      router.replace(newUrl, { scroll: false })
-    }
-  }, [selectedCategory, urlCategory, router])
-
-  // Update category if URL changes (browser back/forward)
-  useEffect(() => {
-    if (urlCategory && allCategories.includes(urlCategory) && urlCategory !== selectedCategory) {
-      setSelectedCategory(urlCategory)
-      setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
-    }
-  }, [urlCategory])
-
-  // Fetch appliances from Supabase
-  useEffect(() => {
-    async function fetchAppliances() {
-      setIsLoading(true)
-      try {
-        // First get deleted ASINs
-        const { data: deletedData } = await supabase
-          .from('deleted_asins')
-          .select('asin')
-        const deletedAsins = new Set(deletedData?.map(d => d.asin) || [])
-        
-        // Fetch all products in batches of 1000 to overcome Supabase limit
-        let allData: any[] = []
-        let from = 0
-        const batchSize = 1000
-        let hasMore = true
-        
-        while (hasMore) {
-          const { data: batchData, error } = await supabase
-            .from('appliances')
-            .select('*')
-            .eq('category', selectedCategory)
-            .not('price', 'is', null)
-            .gte('price', MINIMUM_PRICE)
-            .order('price', { ascending: true })
-            .range(from, from + batchSize - 1)
-          
-          if (error) throw error
-          
-          if (batchData && batchData.length > 0) {
-            allData = [...allData, ...batchData]
-            from += batchSize
-            hasMore = batchData.length === batchSize
-          } else {
-            hasMore = false
-          }
-        }
-        
-        // Filter out deleted ASINs and parts/accessories
-        const filtered = allData.filter(item => {
-          // Skip deleted ASINs
-          if (deletedAsins.has(item.asin)) return false
-          // Skip parts/accessories based on title
-          if (isPartOrAccessory(item.title, filterWords)) return false
-          return true
-        })
-        setAppliances(filtered)
-      } catch (error) {
-        console.error('Error fetching appliances:', error)
-        setAppliances([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    fetchAppliances()
-  }, [selectedCategory, filterWords])
-
-  // State for expanding brand list
-  const [brandsExpanded, setBrandsExpanded] = useState(false)
-  const [colorsExpanded, setColorsExpanded] = useState(false)
-  const COLLAPSED_COUNT = 10
-  const EXPANDED_COUNT = 20
-
-  const brands = useMemo(() => {
-    // Count products per brand
-    const brandCounts: Record<string, number> = {}
-    appliances.forEach(item => {
-      if (item.brand) {
-        brandCounts[item.brand] = (brandCounts[item.brand] || 0) + 1
-      }
-    })
-    
-    // Sort by count descending
-    return Object.keys(brandCounts).sort((a, b) => brandCounts[b] - brandCounts[a])
-  }, [appliances])
-
-  // Valid color names to filter against model numbers appearing in color field
-  const isValidColor = (color: string): boolean => {
-    if (!color) return false
-    // Filter out values that look like model numbers (contain numbers or are too long)
-    if (/\d/.test(color)) return false
-    if (color.length > 30) return false
-    // Common color keywords
-    const colorKeywords = ['black', 'white', 'silver', 'gray', 'grey', 'red', 'blue', 'green', 'gold', 'brown', 'beige', 'cream', 'navy', 'stainless', 'steel', 'slate', 'graphite', 'bronze', 'copper', 'platinum', 'charcoal', 'ivory', 'wood', 'oak', 'walnut', 'cherry', 'mahogany', 'pink', 'purple', 'orange', 'yellow', 'teal', 'burgundy', 'tan', 'natural', 'clear', 'transparent', 'matte', 'glossy', 'brushed', 'chrome', 'nickel', 'bisque', 'almond', 'onyx', 'pearl', 'midnight', 'titanium', 'sand', 'mocha', 'espresso']
-    const lowerColor = color.toLowerCase()
-    return colorKeywords.some(keyword => lowerColor.includes(keyword))
-  }
-
-  const colors = useMemo(() => {
-    const colorSet = new Set(
-      appliances
-        .map(a => a.color)
-        .filter(Boolean)
-        .filter(isValidColor)
-    )
-    return Array.from(colorSet).sort()
-  }, [appliances])
-
-  const typeCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    appliances.forEach(item => {
-      if (item.type) {
-        counts[item.type] = (counts[item.type] || 0) + 1
-      }
-    })
-    return counts
-  }, [appliances])
-
-  const brandCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    appliances.forEach(item => {
-      if (item.brand) {
-        counts[item.brand] = (counts[item.brand] || 0) + 1
-      }
-    })
-    return counts
-  }, [appliances])
-
-  const colorCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    appliances.forEach(item => {
-      if (item.color) {
-        counts[item.color] = (counts[item.color] || 0) + 1
-      }
-    })
-    return counts
-  }, [appliances])
-
-  const filteredAppliances = useMemo(() => {
-    return appliances.filter(item => {
-      if (filters.types.length && !filters.types.includes(item.type)) return false
-      if (filters.brands.length && !filters.brands.includes(item.brand)) return false
-      if (filters.colors.length && !filters.colors.includes(item.color)) return false
-      
-      // Screen size filter (for TVs)
-      if (filters.screenSizes.length > 0 && selectedCategory === 'Televisions') {
-        const screenSize = item.screen_size
-        if (!screenSize) return false
-        const matchesSize = filters.screenSizes.some(label => {
-          const range = TV_SIZE_RANGES.find(r => r.label === label)
-          if (!range) return false
-          return screenSize >= range.min && screenSize <= range.max
-        })
-        if (!matchesSize) return false
-      }
-      
-      return true
-    })
-  }, [appliances, filters, selectedCategory])
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredAppliances.length / PAGE_SIZE)
-  const paginatedAppliances = useMemo(() => {
-    const start = currentPage * PAGE_SIZE
-    return filteredAppliances.slice(start, start + PAGE_SIZE)
-  }, [filteredAppliances, currentPage])
-
-  // Screen size counts for TV filter
-  const screenSizeCounts = useMemo(() => {
-    if (selectedCategory !== 'Televisions') return {}
-    const counts: Record<string, number> = {}
-    TV_SIZE_RANGES.forEach(range => {
-      counts[range.label] = appliances.filter(item => {
-        const size = item.screen_size
-        return size && size >= range.min && size <= range.max
-      }).length
-    })
-    return counts
-  }, [appliances, selectedCategory])
-
-  const toggleFilter = (key: 'types' | 'brands' | 'colors' | 'screenSizes', value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: prev[key].includes(value)
-        ? prev[key].filter(v => v !== value)
-        : [...prev[key], value]
-    }))
-    setCurrentPage(0) // Reset to first page when filter changes
-  }
-
-  const handleCategoryChange = (cat: string) => {
-    setSelectedCategory(cat)
-    setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
-    setCurrentPage(0)
-    setBrandsExpanded(false)
-    setColorsExpanded(false)
-    // URL will be updated by the useEffect
-  }
-
-  const clearAllFilters = () => {
-    setFilters({ types: [], brands: [], colors: [], screenSizes: [] })
-    setCurrentPage(0)
-  }
-
-  const hasActiveFilters = filters.types.length > 0 || filters.brands.length > 0 || filters.colors.length > 0 || filters.screenSizes.length > 0
-
-  const getDiscount = (item: Appliance) => {
-    if (!item.list_price || item.list_price <= item.price) return null
-    return Math.round(((item.list_price - item.price) / item.list_price) * 100)
-  }
-
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header - Sticky */}
+      {/* Header - Server Rendered */}
       <header className="border-b border-slate-700 bg-black sticky top-0 z-50">
         <div className="px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-baseline gap-3">
@@ -363,361 +21,180 @@ function HomeContent() {
             </span>
             <span className="text-slate-400 text-sm hidden sm:block">Smart Shoppers Start Here</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <nav className="flex items-center gap-4">
             <Link href="/deals" className="flex items-center gap-1 text-green-400 hover:text-green-300 text-sm font-medium">
               🔥 Deals
             </Link>
             <Link href="/blog" className="text-slate-400 hover:text-slate-300 text-sm font-medium">
               📚 Guides
             </Link>
-            <Link href="/admin" className="text-slate-400 hover:text-slate-300 text-sm">
-              Admin
-            </Link>
-          </div>
+          </nav>
         </div>
       </header>
 
-      <div className="px-4 py-6">
-        {/* Mobile filter button */}
-        <div className="md:hidden mb-4">
-          <button 
-            onClick={() => setSidebarOpen(true)}
-            className="flex items-center gap-2 text-slate-300 border border-slate-600 px-4 py-2 rounded-lg"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
+      {/* SEO Hero Section - Server Rendered */}
+      <section className="bg-gradient-to-b from-slate-900 to-black px-4 py-10">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Compare Appliance Prices Instantly
+          </h1>
+          <p className="text-xl text-slate-300 mb-6">
+            Find the best deals on refrigerators, washers, dryers, dishwashers, TVs, and more. 
+            We compare prices from Amazon and Home Depot so you don't have to.
+          </p>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            Stop overpaying for major appliances. Our real-time price comparison tool helps you find 
+            the lowest prices on thousands of products from top brands like Samsung, LG, Whirlpool, 
+            GE, Maytag, and more.
+          </p>
         </div>
+      </section>
 
-        <div className="flex gap-6">
-          {/* Sidebar */}
-          <div className={`
-            fixed md:relative inset-y-0 left-0 z-50 md:z-0
-            w-72 md:w-56 
-            bg-black md:bg-transparent
-            transform transition-transform duration-300 ease-in-out
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-            md:flex-shrink-0
-            p-4 md:p-0
-            md:sticky md:top-20 md:h-[calc(100vh-100px)] md:overflow-y-auto
-          `}>
-            {/* Close button for mobile */}
-            <div className="md:hidden flex justify-end mb-4">
-              <button onClick={() => setSidebarOpen(false)}>
-                <X className="w-5 h-5 text-slate-300" />
-              </button>
+      {/* Category Quick Links - Server Rendered for SEO */}
+      <section className="bg-slate-900/50 px-4 py-8 border-b border-slate-800">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-lg font-semibold text-center mb-6 text-slate-300">Shop By Category</h2>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/category/refrigerators" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Refrigerators
+            </Link>
+            <Link href="/category/freezers" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Freezers
+            </Link>
+            <Link href="/category/dishwashers" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Dishwashers
+            </Link>
+            <Link href="/category/ranges" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Ranges & Stoves
+            </Link>
+            <Link href="/category/washers" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Washers
+            </Link>
+            <Link href="/category/dryers" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Dryers
+            </Link>
+            <Link href="/category/air-fryers" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Air Fryers
+            </Link>
+            <Link href="/category/ice-makers" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Ice Makers
+            </Link>
+            <Link href="/category/air-conditioners" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Air Conditioners
+            </Link>
+            <Link href="/category/televisions" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Televisions
+            </Link>
+            <Link href="/category/cell-phones" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-full text-sm transition">
+              Cell Phones
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Price Comparison Tool - Client Rendered */}
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      }>
+        <HomeClient />
+      </Suspense>
+
+      {/* Why Choose Us - Server Rendered SEO Content */}
+      <section className="bg-slate-900 px-4 py-12 border-t border-slate-800">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-8">Why Use Appliance Prices?</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="text-3xl mb-3">💰</div>
+              <h3 className="font-semibold mb-2">Save Money</h3>
+              <p className="text-slate-400 text-sm">
+                Compare prices across major retailers instantly. Find the best deals without visiting multiple websites.
+              </p>
             </div>
-
-            {/* Category dropdown */}
-            <div className="mb-5">
-              <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Category</label>
-              <select 
-                value={selectedCategory} 
-                onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-white"
-              >
-                {allCategories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {categoryConfig[cat].title}
-                  </option>
-                ))}
-              </select>
+            <div className="text-center">
+              <div className="text-3xl mb-3">⚡</div>
+              <h3 className="font-semibold mb-2">Real-Time Prices</h3>
+              <p className="text-slate-400 text-sm">
+                Our prices are updated daily from Amazon and Home Depot. Always see the most current deals.
+              </p>
             </div>
-
-            {/* Type filter - expanded */}
-            {config.types && config.types.length > 0 && (
-              <div className="mb-5">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Type</label>
-                <div className="space-y-1">
-                  {config.types.map(type => (
-                    <label key={type} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.types.includes(type)}
-                        onChange={() => toggleFilter('types', type)}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                      />
-                      <span className="text-slate-300">{type} ({typeCounts[type] || 0})</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Brand filter - collapsible */}
-            {brands.length > 0 && (
-              <div className="mb-5">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Brand</label>
-                <div className="space-y-1">
-                  {(brandsExpanded ? brands.slice(0, EXPANDED_COUNT) : brands.slice(0, COLLAPSED_COUNT)).map(brand => (
-                    <label key={brand} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.brands.includes(brand)}
-                        onChange={() => toggleFilter('brands', brand)}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                      />
-                      <span className="text-slate-300">{brand} ({brandCounts[brand] || 0})</span>
-                    </label>
-                  ))}
-                </div>
-                {brands.length > COLLAPSED_COUNT && (
-                  <button
-                    onClick={() => setBrandsExpanded(!brandsExpanded)}
-                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
-                  >
-                    {brandsExpanded ? '− Show less' : `+ Show more`}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Screen Size filter - only for TVs (before Color) */}
-            {selectedCategory === 'Televisions' && (
-              <div className="mb-5">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Screen Size</label>
-                <div className="space-y-1">
-                  {TV_SIZE_RANGES.map(range => (
-                    <label key={range.label} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.screenSizes.includes(range.label)}
-                        onChange={() => toggleFilter('screenSizes', range.label)}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                      />
-                      <span className="text-slate-300">{range.label} ({screenSizeCounts[range.label] || 0})</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Color filter - collapsible */}
-            {colors.length > 0 && (
-              <div className="mb-5">
-                <label className="text-xs font-semibold text-slate-400 mb-2 block uppercase tracking-wide">Color</label>
-                <div className="space-y-1">
-                  {(colorsExpanded ? colors.slice(0, EXPANDED_COUNT) : colors.slice(0, COLLAPSED_COUNT)).map(color => (
-                    <label key={color} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-800 px-2 py-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.colors.includes(color)}
-                        onChange={() => toggleFilter('colors', color)}
-                        className="w-4 h-4 rounded border-slate-600 bg-black text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
-                      />
-                      <span className="text-slate-300">{color} ({colorCounts[color] || 0})</span>
-                    </label>
-                  ))}
-                </div>
-                {colors.length > COLLAPSED_COUNT && (
-                  <button
-                    onClick={() => setColorsExpanded(!colorsExpanded)}
-                    className="mt-2 text-xs text-blue-400 hover:text-blue-300 px-2"
-                  >
-                    {colorsExpanded ? '− Show less' : `+ Show more`}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Clear filters button */}
-            {hasActiveFilters && (
-              <button
-                onClick={clearAllFilters}
-                className="w-full text-sm text-red-400 hover:text-red-300 py-2 border border-red-400/30 rounded hover:bg-red-400/10 transition"
-              >
-                Clear All Filters
-              </button>
-            )}
-
-            {/* Affiliate Disclosure */}
-            <div className="mt-6 pt-4 border-t border-slate-700">
-              <p className="text-xs text-slate-500 leading-relaxed">
-                As an Amazon Associate we earn from qualifying purchases.
+            <div className="text-center">
+              <div className="text-3xl mb-3">🏆</div>
+              <h3 className="font-semibold mb-2">Top Brands</h3>
+              <p className="text-slate-400 text-sm">
+                Compare products from Samsung, LG, Whirlpool, GE, Maytag, Frigidaire, KitchenAid, and more.
               </p>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Overlay for mobile */}
-          {sidebarOpen && (
-            <div 
-              className="fixed inset-0 bg-black/50 z-40 md:hidden"
-              onClick={() => setSidebarOpen(false)}
-            />
-          )}
-
-          {/* Main table */}
-          <div className="flex-1 overflow-auto">
-            {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(10)].map((_, i) => (
-                  <div key={i} className="h-8 bg-slate-800 rounded animate-pulse" />
-                ))}
-              </div>
-            ) : filteredAppliances.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
-                <p className="text-lg mb-2">No products found</p>
-                <p className="text-sm">Try changing your filters or add products to your database.</p>
-              </div>
-            ) : (
-              <>
-                {/* Results count and pagination info */}
-                <div className="mb-3 flex justify-between items-center text-sm text-slate-400">
-                  <span>
-                    Showing {currentPage * PAGE_SIZE + 1} - {Math.min((currentPage + 1) * PAGE_SIZE, filteredAppliances.length)} of {filteredAppliances.length} products
-                  </span>
-                  {totalPages > 1 && (
-                    <span>Page {currentPage + 1} of {totalPages}</span>
-                  )}
-                </div>
-
-                <div>
-                  <table className="w-full text-sm border-collapse leading-tight min-w-[600px]">
-                    <thead className="sticky top-0 z-10">
-                      <tr className="border-b border-slate-600 text-left bg-slate-900">
-                        {config.tableColumns.map(col => (
-                          <th key={col.key} className="font-semibold text-slate-300 text-sm px-2 py-2 bg-slate-900">
-                            {(col.label || '').split('\n').map((line, i, arr) => (
-                              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
-                            ))}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedAppliances.map((item) => {
-                        const discount = getDiscount(item)
-                        return (
-                          <tr key={item.id} className="border-b border-slate-800 hover:bg-slate-900">
-                            {config.tableColumns.map(col => {
-                              if (col.key === 'image') {
-                                return (
-                                  <td key={col.key} className="px-2 py-1">
-                                    <ProductImage 
-                                      src={item.image_url} 
-                                      alt={item.title || `${item.brand} ${item.model}`}
-                                      link={`/product/${item.asin}`}
-                                    />
-                                  </td>
-                                )
-                              }
-                              if (col.key === 'price') {
-                                return (
-                                  <td key={col.key} className="text-white px-2 py-1">
-                                    ${item.price?.toLocaleString()}
-                                    {discount && (
-                                      <span className="ml-1 text-green-500 text-xs">-{discount}%</span>
-                                    )}
-                                  </td>
-                                )
-                              }
-                              if (col.key === 'rating') {
-                                return (
-                                  <td key={col.key} className="px-2 py-1">
-                                    {item.rating ? (
-                                      <span className="flex items-center gap-0.5">
-                                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                        {item.rating.toFixed(1)}
-                                      </span>
-                                    ) : '—'}
-                                  </td>
-                                )
-                              }
-                              if (col.key === 'link') {
-                                return (
-                                  <td key={col.key} className="px-2 py-1">
-                                    <a
-                                      href={getAffiliateUrl(item.asin)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-400 hover:underline line-clamp-1"
-                                      title={item.title}
-                                    >
-                                      {item.title || `${item.brand} ${item.model || ''}`}
-                                    </a>
-                                  </td>
-                                )
-                              }
-                              if (col.type === 'boolean') {
-                                return (
-                                  <td key={col.key} className="text-slate-300 px-2 py-1 text-center">
-                                    {item[col.key] ? <span className="text-yellow-400">★</span> : '—'}
-                                  </td>
-                                )
-                              }
-                              return (
-                                <td key={col.key} className="text-slate-300 px-2 py-1">
-                                  {item[col.key] ?? '—'}
-                                </td>
-                              )
-                            })}
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination controls */}
-                {totalPages > 1 && (
-                  <div className="mt-4 flex items-center justify-center gap-2">
-                    <button 
-                      onClick={() => setCurrentPage(0)} 
-                      disabled={currentPage === 0}
-                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
-                    >
-                      First
-                    </button>
-                    <button 
-                      onClick={() => setCurrentPage(p => Math.max(0, p - 1))} 
-                      disabled={currentPage === 0}
-                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
-                    >
-                      ← Prev
-                    </button>
-                    
-                    <div className="flex items-center gap-1 px-2">
-                      <span className="text-sm text-slate-400">Page</span>
-                      <input 
-                        type="number" 
-                        min={1} 
-                        max={totalPages}
-                        value={currentPage + 1}
-                        onChange={(e) => {
-                          const page = parseInt(e.target.value) - 1
-                          if (page >= 0 && page < totalPages) {
-                            setCurrentPage(page)
-                          }
-                        }}
-                        className="w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-sm text-center text-slate-300"
-                      />
-                      <span className="text-sm text-slate-400">of {totalPages}</span>
-                    </div>
-                    
-                    <button 
-                      onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} 
-                      disabled={currentPage >= totalPages - 1}
-                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
-                    >
-                      Next →
-                    </button>
-                    <button 
-                      onClick={() => setCurrentPage(totalPages - 1)} 
-                      disabled={currentPage >= totalPages - 1}
-                      className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-sm text-slate-300"
-                    >
-                      Last
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
+      {/* Popular Guides - Server Rendered */}
+      <section className="px-4 py-12 border-t border-slate-800">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-8">Appliance Buying Guides</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <Link href="/blog/best-time-to-buy-appliances" className="block p-6 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition">
+              <h3 className="font-semibold mb-2">Best Time to Buy Appliances in 2025</h3>
+              <p className="text-slate-400 text-sm">Discover when major retailers offer the biggest discounts on refrigerators, washers, and more.</p>
+            </Link>
+            <Link href="/blog/refrigerator-buying-guide" className="block p-6 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition">
+              <h3 className="font-semibold mb-2">Refrigerator Buying Guide</h3>
+              <p className="text-slate-400 text-sm">French door vs side-by-side, features to look for, and how to choose the right size.</p>
+            </Link>
+            <Link href="/blog/washer-dryer-buying-guide" className="block p-6 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition">
+              <h3 className="font-semibold mb-2">Washer & Dryer Buying Guide</h3>
+              <p className="text-slate-400 text-sm">Top load vs front load, gas vs electric dryers, and which features are worth paying for.</p>
+            </Link>
+            <Link href="/blog/amazon-vs-home-depot-appliances" className="block p-6 bg-slate-900 rounded-lg border border-slate-800 hover:border-slate-700 transition">
+              <h3 className="font-semibold mb-2">Amazon vs Home Depot: Where to Buy?</h3>
+              <p className="text-slate-400 text-sm">Compare prices, delivery, installation, and return policies between major retailers.</p>
+            </Link>
+          </div>
+          <div className="text-center mt-6">
+            <Link href="/blog" className="text-blue-400 hover:text-blue-300">
+              View all buying guides →
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* SEO Footer with Internal Links */}
-      <footer className="border-t border-slate-800 bg-slate-950 mt-8">
+      {/* SEO Content Section - Server Rendered */}
+      <section className="px-4 py-12 border-t border-slate-800 bg-slate-900/30">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6">Compare Appliance Prices From Top Retailers</h2>
+          <div className="prose prose-invert prose-slate max-w-none">
+            <p className="text-slate-300 mb-4">
+              Finding the best price on major appliances shouldn't require hours of research. Appliance Prices 
+              makes it easy to compare prices from Amazon and Home Depot side by side, so you can make informed 
+              purchasing decisions and save money.
+            </p>
+            <p className="text-slate-300 mb-4">
+              Whether you're shopping for a new refrigerator, washing machine, dishwasher, or television, our 
+              comprehensive database includes thousands of products from leading brands. We track prices daily 
+              and highlight the best deals so you never miss a sale.
+            </p>
+            <h3 className="text-xl font-semibold mt-6 mb-3">Popular Appliance Categories</h3>
+            <p className="text-slate-300 mb-4">
+              <strong>Kitchen Appliances:</strong> Compare prices on French door refrigerators, side-by-side refrigerators, 
+              top freezer models, dishwashers, ranges, and cooking appliances from Samsung, LG, Whirlpool, GE, and Frigidaire.
+            </p>
+            <p className="text-slate-300 mb-4">
+              <strong>Laundry Appliances:</strong> Find deals on top-loading washers, front-loading washers, gas dryers, 
+              and electric dryers. Compare Maytag, Whirlpool, LG, and Samsung laundry pairs.
+            </p>
+            <p className="text-slate-300 mb-4">
+              <strong>Electronics:</strong> Shop for OLED TVs, QLED TVs, 4K smart TVs, and the latest smartphones 
+              from Samsung, LG, Sony, TCL, and Apple.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer - Server Rendered */}
+      <footer className="border-t border-slate-800 bg-slate-950">
         <div className="max-w-7xl mx-auto px-4 py-12">
           {/* Category Links */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-10">
@@ -763,11 +240,11 @@ function HomeContent() {
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold text-white mb-3">Resources</h3>
+              <h3 className="font-semibold text-white mb-3">Company</h3>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/deals" className="text-slate-400 hover:text-white">Today's Deals</Link></li>
-                <li><Link href="/blog/amazon-vs-home-depot-appliances" className="text-slate-400 hover:text-white">Amazon vs Home Depot</Link></li>
-                <li><Link href="/blog/energy-star-appliances-worth-it" className="text-slate-400 hover:text-white">Energy Star Guide</Link></li>
+                <li><Link href="/privacy" className="text-slate-400 hover:text-white">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="text-slate-400 hover:text-white">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
