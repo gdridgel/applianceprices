@@ -204,10 +204,11 @@ function HomeContent() {
 
   const { colors, colorCounts } = useMemo(() => {
     const counts: Record<string, number> = {}
+    const hasDigit = (str: string) => str.split('').some(c => c >= '0' && c <= '9')
     appliances.forEach(item => {
       if (item.color) {
         const color = item.color
-        if (/\d/.test(color)) return
+        if (hasDigit(color)) return
         if (color.length > 30) return
         counts[color] = (counts[color] || 0) + 1
       }
