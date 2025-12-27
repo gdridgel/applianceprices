@@ -1,9 +1,13 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getProducts, Appliance } from '@/lib/supabase-server'
-import { Star, Check } from 'lucide-react'
-import ProductTableClient from '@/components/ProductTableClient'
+import { createClient } from '@supabase/supabase-js'
+import { Star } from 'lucide-react'
+
+// Server-side Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Category SEO data
 const categoryData: Record<string, {
@@ -104,6 +108,19 @@ const categoryData: Record<string, {
   }
 }
 
+type Appliance = {
+  id: string
+  asin: string
+  title: string
+  brand: string
+  model: string
+  type: string
+  price: number
+  list_price: number
+  rating: number
+  image_url: string
+}
+
 type Props = {
   params: Promise<{ slug: string }>
 }
@@ -123,41 +140,61 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: category.title,
       description: category.description,
-      url: `https://www.appliance-prices.com/category/${slug}`,
+      url: 'https://www.appliance-prices.com/category/' + slug,
       type: 'website'
     },
     alternates: {
-      canonical: `https://www.appliance-prices.com/category/${slug}`
+      canonical: 'https://www.appliance-prices.com/category/' + slug
     }
   }
 }
 
 export async function generateStaticParams() {
-  return Object.keys(categoryData).map(slug => ({ slug }))
+  return Object.keys(categoryData).map(function(slug) { 
+    return { slug: slug } 
+  })
 }
 
-// Helper to format price
+// Server-side data fetching
+async function getProducts(categoryName: string): Promise<Appliance[]> {
+  var result = await supabase
+    .from('appliances')
+    .select('id, asin, title, brand, model, type, price, list_price, rating, image_url')
+    .eq('category', categoryName)
+    .gte('price', 50)
+    .not('price', 'is', null)
+    .order('price', { ascending: true })
+    .limit(50)
+  
+  if (result.error) {
+    console.error('Error fetching products:', result.error)
+    return []
+  }
+  
+  return result.data || []
+}
+
 function formatPrice(price: number | null): string {
   if (!price) return '—'
   return '$' + price.toFixed(0)
 }
 
-// Helper to get discount
 function getDiscount(price: number, listPrice: number | null): number | null {
   if (!listPrice || listPrice <= price) return null
   return Math.round(((listPrice - price) / listPrice) * 100)
 }
 
 export default async function CategoryPage({ params }: Props) {
-  const { slug } = await params
-  const category = categoryData[slug]
+  var resolvedParams = await params
+  var slug = resolvedParams.slug
+  var category = categoryData[slug]
   
   if (!category) {
     notFound()
   }
   
-  // Fetch products SERVER-SIDE - this is the key for SSR
-  const products = await getProducts(category.name, 50)
+  // Fetch products SERVER-SIDE
+  var products = await getProducts(category.name)
   
   return (
     <div className="min-h-screen bg-black text-white">
@@ -183,7 +220,7 @@ export default async function CategoryPage({ params }: Props) {
         <span className="text-white">{category.name}</span>
       </nav>
 
-      {/* H1 and Intro - Server Rendered for SEO */}
+      {/* H1 and Intro */}
       <section className="px-4 py-4">
         <h1 className="text-2xl font-bold mb-2">{category.h1}</h1>
         <p className="text-slate-400 text-sm max-w-3xl">{category.intro}</p>
@@ -207,9 +244,9 @@ export default async function CategoryPage({ params }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {products.map((item, idx) => {
-                  const discount = getDiscount(item.price, item.list_price)
-                  const affiliateUrl = `https://www.amazon.com/dp/${item.asin}?tag=appliances04d-20`
+                {products.map(function(item, idx) {
+                  var discount = getDiscount(item.price, item.list_price)
+                  var affiliateUrl = 'https://www.amazon.com/dp/' + item.asin + '?tag=appliances04d-20'
                   
                   return (
                     <tr key={item.id} className={idx % 2 === 0 ? 'bg-slate-900/50' : 'bg-slate-900/30'}>
@@ -232,10 +269,10 @@ export default async function CategoryPage({ params }: Props) {
                       <td className="px-2 py-2 text-xs">{item.brand || '—'}</td>
                       <td className="px-2 py-2">
                         <Link 
-                          href={`/product/${item.asin}`}
+                          href={'/product/' + item.asin}
                           className="text-xs text-blue-400 hover:underline block max-w-[150px] truncate"
                         >
-                          {item.model || item.title?.substring(0, 40) || '—'}
+                          {item.model || (item.title ? item.title.substring(0, 40) : '—')}
                         </Link>
                       </td>
                       <td className="px-2 py-2 text-xs">{item.type || '—'}</td>
@@ -267,10 +304,10 @@ export default async function CategoryPage({ params }: Props) {
           </div>
         </div>
         
-        {/* Link to full interactive version */}
+        {/* Link to interactive version */}
         <div className="mt-4 text-center">
           <Link 
-            href={`/?category=${encodeURIComponent(category.name)}`}
+            href={'/?category=' + encodeURIComponent(category.name)}
             className="text-blue-400 hover:text-blue-300 text-sm"
           >
             View all {category.name} with filters →
