@@ -37,7 +37,7 @@ export default function HomePage() {
           </nav>
         </div>
       </header>
-
+<meta name="google-site-verification" content="9kIqQ_7QHpzn6okWK9McecYcSJWzT9hfuuJ3tWsNbs0" />
       {/* Interactive Tool - Client Side */}
       <HomeClient />
 
