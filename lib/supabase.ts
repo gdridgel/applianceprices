@@ -5,7 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabaseServer = createClient(supabaseUrl, supabaseAnonKey)
-
+export const supabase = supabaseServer
 export type Appliance = {
   id: string
   asin: string
